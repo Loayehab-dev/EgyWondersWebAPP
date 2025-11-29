@@ -4,14 +4,13 @@ using EgyWonders.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace EgyWonders.Controllers
 {
-    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Requires login for all actions
     public class TourBookingsController : ControllerBase
     {
         private readonly ITourBookingService _tourBookingService;
@@ -21,7 +20,7 @@ namespace EgyWonders.Controllers
             _tourBookingService = tourBookingService;
         }
 
-        // POST: api/TourBookings (Book tickets for a schedule)
+        // POST: api/TourBookings
         [HttpPost]
         public async Task<IActionResult> BookTour(TourBookingCreateDTO dto)
         {
@@ -30,16 +29,25 @@ namespace EgyWonders.Controllers
                 if (!ModelState.IsValid) return BadRequest(ModelState);
 
                 var booking = await _tourBookingService.BookTourAsync(dto);
+                // Ideally return 201 Created
                 return Ok(booking);
             }
             catch (Exception ex)
             {
-                // Catches errors like "Only 5 seats available"
+                // Returns 400 if validation fails (e.g. "Only 5 seats available")
                 return BadRequest(new { error = ex.Message });
             }
         }
 
-        // GET: api/TourBookings/5 
+        // GET: api/TourBookings/user/5
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetUserTourBookings(int userId)
+        {
+            var bookings = await _tourBookingService.GetUserTourBookingsAsync(userId);
+            return Ok(bookings);
+        }
+
+        // GET: api/TourBookings/5
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -48,27 +56,22 @@ namespace EgyWonders.Controllers
             return Ok(booking);
         }
 
-        // GET: api/TourBookings/user/101 (Get all tours booked by a specific user)
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetMyTours(int userId)
-        {
-            var bookings = await _tourBookingService.GetUserTourBookingsAsync(userId);
-            return Ok(bookings);
-        }
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAllBookings()
-        {
-            var bookings = await _tourBookingService.GetAllTourBookingsAsync();
-            return Ok(bookings);
-        }
-
-        // DELETE: api/TourBookings/5 (Cancel booking and restore seats)
+        // DELETE: api/TourBookings/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Cancel(int id)
         {
-            var success = await _tourBookingService.CancelBookingAsync(id);
-            if (!success) return NotFound(new { message = "Booking not found" });
+            var result = await _tourBookingService.CancelBookingAsync(id);
+            if (!result) return NotFound(new { message = "Booking not found or already cancelled" });
             return Ok(new { message = "Tour Booking cancelled and seats released." });
+        }
+
+        // GET: api/TourBookings/all (Admin Only)
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAll()
+        {
+            var bookings = await _tourBookingService.GetAllTourBookingsAsync();
+            return Ok(bookings);
         }
     }
 }

@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using EgyWonders.DTO;
 using EgyWonders.Models;
 using EgyWonders.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace EgyWonders.Services
 {
@@ -17,192 +19,174 @@ namespace EgyWonders.Services
             _uow = uow;
         }
 
-        
+      
         public async Task<BookingDTO> CreateBookingAsync(BookingCreateDTO dto)
         {
-           
-            if (dto.CheckIn >= dto.CheckOut)
-                throw new Exception("Check-out date must be after check-in date.");
-
-            if (dto.CheckIn.Date < DateTime.UtcNow.Date)
-                throw new Exception("Cannot book dates in the past.");
+            if (dto.CheckIn >= dto.CheckOut) throw new Exception("Check-out must be after check-in.");
+            if (dto.CheckIn.Date < DateTime.UtcNow.Date) throw new Exception("Cannot book past dates.");
 
             var listing = await _uow.Repository<Listing>().GetByIdAsync(dto.ListingId);
-            if (listing == null)
-                throw new Exception("Listing not found.");
+            if (listing == null) throw new Exception("Listing not found.");
 
-            // Check if user is booking their own listing 
-            if (listing.UserId == dto.UserId)
-                throw new Exception("You cannot book your own listing.");
+            if (listing.UserId == dto.UserId) throw new Exception("You cannot book your own listing.");
 
-            
-            
+            // Capacity Check
             if (listing.Capacity > 0 && dto.NumberOfGuests > listing.Capacity)
-            {
-                throw new Exception($"This listing has a maximum capacity of {listing.Capacity} guests. You requested {dto.NumberOfGuests}.");
-            }
+                throw new Exception($"Max capacity is {listing.Capacity}.");
 
-           
-            // Check if any confirmed booking overlaps with the requested dates
-            var existingBookings = await _uow.Repository<ListingBooking>().GetAllAsync(
+            // Availability Check
+            var conflicts = await _uow.Repository<ListingBooking>().GetAllAsync(
                 b => b.ListingId == dto.ListingId &&
-                     b.Status != "Cancelled" && 
+                     b.Status != "Cancelled" &&
                      b.CheckIn < dto.CheckOut &&
                      b.CheckOut > dto.CheckIn
             );
 
-            if (existingBookings.Any())
-                throw new Exception("This listing is unavailable for the selected dates.");
+            if (conflicts.Any()) throw new Exception("Dates are unavailable.");
 
+            // Price Calculation
+            var days = (dto.CheckOut.Date - dto.CheckIn.Date).Days;
+            if (days < 1) days = 1;
+            var total = days * listing.PricePerNight;
 
-            var numberOfDays = (dto.CheckOut.Date - dto.CheckIn.Date).Days;
-
-            if (numberOfDays < 1) numberOfDays = 1; 
-
-            var totalPrice = numberOfDays * listing.PricePerNight;
-
+            // Save
             var booking = new ListingBooking
             {
                 ListingId = dto.ListingId,
                 UserId = dto.UserId,
                 CheckIn = dto.CheckIn,
                 CheckOut = dto.CheckOut,
-                TotalPrice = totalPrice,
-                NumberOfGuests = dto.NumberOfGuests, 
-                Status = "Pending",
+                NumberOfGuests = dto.NumberOfGuests,
+                TotalPrice = total,
+                Status = "Pending Payment", 
                 BookingDate = DateTime.UtcNow
             };
 
             _uow.Repository<ListingBooking>().Add(booking);
             await _uow.CompleteAsync();
 
-       
+            // Return DTO
             var guest = await _uow.Repository<User>().GetByIdAsync(dto.UserId);
-
-            return new BookingDTO
-            {
-                BookId = booking.BookId,
-                ListingTitle = listing.Title,
-                GuestName = guest != null ? $"{guest.FirstName} {guest.LastName}" : "Unknown",
-                CheckIn = booking.CheckIn,
-                CheckOut = booking.CheckOut,
-                TotalPrice = booking.TotalPrice,
-                Status = booking.Status
-            };
+            return MapToDto(booking, listing.Title, guest);
         }
 
-      
+        
+        //  (GetById, GetAll, GetUser)
+        
+
+        public async Task<BookingDTO> GetBookingByIdAsync(int bookingId)
+        {
+            var booking = (await _uow.Repository<ListingBooking>().GetAllAsync(
+                filter: b => b.BookId == bookingId,
+                includes: new Expression<Func<ListingBooking, object>>[] { x => x.Listing, x => x.User }
+            )).FirstOrDefault();
+
+            if (booking == null) return null;
+
+            return MapToDto(booking, booking.Listing.Title, booking.User);
+        }
+
+        public async Task<IEnumerable<BookingDTO>> GetAllBookingsAsync()
+        {
+            var bookings = await _uow.Repository<ListingBooking>().GetAllAsync(
+                null,
+                x => x.Listing, x => x.User
+            );
+            return bookings.Select(b => MapToDto(b, b.Listing.Title, b.User));
+        }
+
         public async Task<IEnumerable<BookingDTO>> GetUserBookingsAsync(int userId)
         {
             var bookings = await _uow.Repository<ListingBooking>().GetAllAsync(
                 filter: b => b.UserId == userId,
-                includes:
-                [
-                    x => x.Listing,
-                    x => x.User
-                ]
+                includes: new Expression<Func<ListingBooking, object>>[] { x => x.Listing, x => x.User }
             );
-
-            return bookings.Select(b => new BookingDTO
-            {
-                BookId = b.BookId,
-                ListingTitle = b.Listing.Title,
-                GuestName = $"{b.User.FirstName} {b.User.LastName}",
-                CheckIn = b.CheckIn,
-                CheckOut = b.CheckOut,
-                TotalPrice = b.TotalPrice,
-                Status = b.Status
-            });
+            return bookings.Select(b => MapToDto(b, b.Listing.Title, b.User));
         }
 
-        public async Task<bool> CancelBookingAsync(int bookingId)
-        {
-            var booking = await _uow.Repository<ListingBooking>().GetByIdAsync(bookingId);
-            if (booking == null) return false;
-
-
-            booking.Status = "Cancelled";
-            _uow.Repository<ListingBooking>().Update(booking);
-
-            await _uow.CompleteAsync();
-            return true;
-        }
+       
+        // 3. UPDATE OPERATION
+      
         public async Task<BookingDTO> UpdateBookingAsync(int bookingId, BookingUpdateDTO dto)
         {
-            //  Get the Booking (Include Listing to check Price/Capacity)
             var booking = (await _uow.Repository<ListingBooking>().GetAllAsync(
                 filter: b => b.BookId == bookingId,
-                includes: x => x.Listing
+                includes: new Expression<Func<ListingBooking, object>>[] { x => x.Listing, x => x.User }
             )).FirstOrDefault();
 
             if (booking == null) throw new Exception("Booking not found.");
-            if (booking.Status == "Cancelled") throw new Exception("Cannot edit a cancelled booking.");
+            if (booking.Status == "Cancelled") throw new Exception("Cannot edit cancelled booking.");
+            if (booking.CheckIn < DateTime.UtcNow.Date) throw new Exception("Cannot edit past booking.");
 
-            // Check if Booking is in the past (Optional safety)
-            if (booking.CheckIn < DateTime.UtcNow.Date)
-                throw new Exception("Cannot edit a past booking.");
-
-         
+            // Update Guests
             if (dto.NumberOfGuests.HasValue)
             {
                 if (booking.Listing.Capacity > 0 && dto.NumberOfGuests.Value > booking.Listing.Capacity)
-                {
-                    throw new Exception($"Maximum capacity is {booking.Listing.Capacity}.");
-                }
+                    throw new Exception($"Max capacity is {booking.Listing.Capacity}.");
                 booking.NumberOfGuests = dto.NumberOfGuests.Value;
             }
 
-           
-            // If either date is changing, we must validate availability & price
+            // Update Dates
             if (dto.CheckIn.HasValue || dto.CheckOut.HasValue)
             {
-                // Use New Dates if provided, otherwise keep Old Dates
                 var newCheckIn = dto.CheckIn ?? booking.CheckIn;
                 var newCheckOut = dto.CheckOut ?? booking.CheckOut;
 
-                // A. Validate Dates
-                if (newCheckIn >= newCheckOut)
-                    throw new Exception("Check-out must be after check-in.");
+                if (newCheckIn >= newCheckOut) throw new Exception("Invalid date range.");
+                if (newCheckIn.Date < DateTime.UtcNow.Date) throw new Exception("Cannot move to past.");
 
-                if (newCheckIn.Date < DateTime.UtcNow.Date)
-                    throw new Exception("Cannot move booking to the past.");
-
-              
+                // Conflict Check (Exclude self)
                 var conflicts = await _uow.Repository<ListingBooking>().GetAllAsync(
                     b => b.ListingId == booking.ListingId &&
-                         b.BookId != booking.BookId && 
+                         b.BookId != booking.BookId &&
                          b.Status != "Cancelled" &&
                          b.CheckIn < newCheckOut &&
                          b.CheckOut > newCheckIn
                 );
 
-                if (conflicts.Any())
-                    throw new Exception("The listing is unavailable for these new dates.");
+                if (conflicts.Any()) throw new Exception("Dates unavailable.");
 
-             
-                // I assume price per night didn't change (using the Listing's current price)
-                var nights = (newCheckOut.Date - newCheckIn.Date).Days;
-                if (nights < 1) nights = 1;
+                // Recalculate Price
+                var days = (newCheckOut.Date - newCheckIn.Date).Days;
+                if (days < 1) days = 1;
 
-                booking.TotalPrice = nights * booking.Listing.PricePerNight;
+                booking.TotalPrice = days * booking.Listing.PricePerNight;
                 booking.CheckIn = newCheckIn;
                 booking.CheckOut = newCheckOut;
             }
 
-           
             _uow.Repository<ListingBooking>().Update(booking);
             await _uow.CompleteAsync();
 
-         
+            return MapToDto(booking, booking.Listing.Title, booking.User);
+        }
+
+       
+        // 4. CANCEL OPERATION
+        
+        public async Task<bool> CancelBookingAsync(int bookingId)
+        {
+            var booking = await _uow.Repository<ListingBooking>().GetByIdAsync(bookingId);
+            if (booking == null || booking.Status == "Cancelled") return false;
+
+            booking.Status = "Cancelled";
+            _uow.Repository<ListingBooking>().Update(booking);
+            await _uow.CompleteAsync();
+            return true;
+        }
+
+        // --- HELPER ---
+        private BookingDTO MapToDto(ListingBooking b, string title, User user)
+        {
             return new BookingDTO
             {
-                BookId = booking.BookId,
-                ListingTitle = booking.Listing.Title,
-                GuestName = booking.User.FirstName, 
-                CheckIn = booking.CheckIn,
-                CheckOut = booking.CheckOut,
-                TotalPrice = booking.TotalPrice,
-                Status = booking.Status
+                BookId = b.BookId,
+                ListingTitle = title,
+                GuestName = user != null ? $"{user.FirstName} {user.LastName}" : "Unknown",
+                CheckIn = b.CheckIn,
+                CheckOut = b.CheckOut,
+                TotalPrice = b.TotalPrice,
+                Status = b.Status
             };
         }
     }

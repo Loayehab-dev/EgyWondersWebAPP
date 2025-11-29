@@ -11,12 +11,12 @@ namespace EgyWonders.Services
     public class PaymentService : IPaymentService
     {
         private readonly IUnitOfWork _uow;
-
-        public PaymentService(IUnitOfWork uow)
+        private readonly IEmailService _emailService;
+        public PaymentService(IUnitOfWork uow, IEmailService emailService)
         {
             _uow = uow;
+            _emailService = emailService;
         }
-
         public async Task<PaymentDto> PayForListingBookingAsync(PaymentCreateDto dto)
         {
             // 1. Validate Booking Exists
@@ -49,7 +49,14 @@ namespace EgyWonders.Services
             _uow.Repository<Payment>().Add(payment);
 
             await _uow.CompleteAsync();
-
+            await SendConfirmationEmail(
+                booking.User.Email,
+                booking.User.FirstName,
+                booking.Listing.Title,
+                dto.Amount,
+                $"From {booking.CheckIn:yyyy-MM-dd} To {booking.CheckOut:yyyy-MM-dd}",
+                $"Guests: {booking.NumberOfGuests}"
+            );
             return new PaymentDto
             {
                 PaymentId = payment.PaymentId,
@@ -74,6 +81,33 @@ namespace EgyWonders.Services
                 Status = p.Status,
                 PaymentDate = p.PaymentDate
             });
+        }
+        private async Task SendConfirmationEmail(string email, string name, string product, decimal amount, string dateInfo, string details)
+        {
+            if (string.IsNullOrEmpty(email)) return;
+
+            string subject = "Booking Confirmed - EgyWonders";
+            string body = $@"
+                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;'>
+                    <h2 style='color: #2c3e50;'>Booking Confirmed! ✅</h2>
+                    <p>Hello <strong>{name}</strong>,</p>
+                    <p>We have successfully received your payment of <strong>{amount:C}</strong>.</p>
+                    <div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0;'>
+                        <p><strong>Product:</strong> {product}</p>
+                        <p><strong>Schedule:</strong> {dateInfo}</p>
+                        <p><strong>Details:</strong> {details}</p>
+                    </div>
+                    <p>Thank you for using EgyWonders!</p>
+                </div>";
+
+            try
+            {
+                await _emailService.SendEmailAsync(email, subject, body);
+            }
+            catch
+            {
+                // Log error internally, but don't fail the payment transaction
+            }
         }
     }
 }
