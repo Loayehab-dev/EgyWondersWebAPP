@@ -53,11 +53,10 @@ namespace EgyWonders.Services
                 throw new Exception("Admin registration is restricted.");
             }
 
-            // 1. Validation: Check if email exists
+            // Check if email/username exists (Cleaned up duplicates)
             if (await _userManager.FindByEmailAsync(dto.Email) != null)
                 throw new Exception("Email is already registered.");
-            if (await _userManager.FindByEmailAsync(dto.Email) != null)
-                throw new Exception("Email already registered.");
+
             if (await _userManager.FindByNameAsync(dto.Username) != null)
                 throw new Exception("Username already taken.");
 
@@ -108,30 +107,47 @@ namespace EgyWonders.Services
             }
             catch
             {
-                // Rollback if business profile fails
+                // Rollback: Delete Identity User if Business Profile fails
                 await _userManager.DeleteAsync(user);
                 throw new Exception("Failed to create business profile.");
             }
 
-            // 5.  SEND CONFIRMATION EMAIL 
-            //
-            //  i didnNOT use try/catch here so you can see the error in Postman if it fails.
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
-            var baseUrl = _config["AppUrl"] ?? "https://localhost:7151";
+            // 5. SEND CONFIRMATION EMAIL (WITH ROLLBACK)
+            try
+            {
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                // Use Uri.EscapeDataString for .NET Core compatibility
+                var encodedToken = Uri.EscapeDataString(token);
+                var baseUrl = _config["AppUrl"] ?? "https://localhost:7151";
 
-            var confirmationLink = $"{baseUrl}/api/Auth/confirm-email?userId={user.Id}&token={encodedToken}";
+                var confirmationLink = $"{baseUrl}/api/Auth/confirm-email?userId={user.Id}&token={encodedToken}";
 
-            string emailBody = $@"
-                <h3>Welcome to EgyWonders, {dto.FirstName}!</h3>
-                 <h4>One step left to start your adventure.</h4>
+                string emailBody = $@"
+            <h3>Welcome to EgyWonders, {dto.FirstName}!</h3>
+            <h4>One step left to start your adventure.</h4>
+            <p> Please confirm your account by clicking the link below:</p>
+            <a href='{confirmationLink}'>Confirm Email</a>";
 
-                <p> Please confirm your account by clicking the link below:</p>
-                <a href='{confirmationLink}'>Confirm Email</a>";
+                await _emailService.SendEmailAsync(dto.Email, "Confirm your email", emailBody);
+            }
+            catch (Exception ex)
+            {
+                // --- ROLLBACK LOGIC START ---
+                // 1. Delete the Business Profile created in Step 4
+                _uow.Repository<User>().Remove(businessUser);
+                await _uow.CompleteAsync();
 
-            await _emailService.SendEmailAsync(dto.Email, "Confirm your email", emailBody);
+                // 2. Delete the Identity User created in Step 2
+                await _userManager.DeleteAsync(user);
 
-            // 6. Return Token
+                // 3. Throw exception so the Controller knows it failed
+                throw new Exception($"Registration cancelled: Failed to send confirmation email. ({ex.Message})");
+                // --- ROLLBACK LOGIC END ---
+            }
+
+            // 6. Return Result
+            // Note: Since you require email confirmation, you might not want to return a Token here.
+            // But keeping your current logic:
             return await GenerateJwtToken(user, businessUser.UserId);
         }
         public async Task<AuthResponseDto> LoginAsync(LoginDTO dto)
@@ -349,7 +365,7 @@ namespace EgyWonders.Services
                 new Claim(ClaimTypes.Name, user.UserName ?? ""),
                 new Claim(ClaimTypes.Email, user.Email ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("BusinessId", businessId.ToString())
+                new Claim("BusinessUserId", businessId.ToString())
             };
 
             foreach (var role in roles)
@@ -372,11 +388,14 @@ namespace EgyWonders.Services
 
             return new AuthResponseDto
             {
+             
                 Email = user.Email ?? "",
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 Roles = roles.ToList(),
                 BusinessUserId = businessId,
-                ExpiresAt = expiry
+                ExpiresAt = expiry,
+                UserId = user.Id,
+                
             };
         }
 
@@ -527,6 +546,24 @@ namespace EgyWonders.Services
         }
 
 
+        // Inside AccountService.cs (API Project)
+        public async Task<bool> PromoteUserToHostAsync(int businessId)
+        {
+            // 1. Get the Business User (Integer ID)
+            var businessUser = await _uow.Repository<User>().GetByIdAsync(businessId);
+            if (businessUser == null) return false;
+
+            // 2. Get the Identity User (String GUID)
+            var user = await _userManager.FindByIdAsync(businessUser.AspNetUserId);
+            if (user == null) return false;
+
+            // 3. Assign Role (Reuse your existing method if possible, or direct Add)
+            if (!await _userManager.IsInRoleAsync(user, "Host"))
+            {
+                await _userManager.AddToRoleAsync(user, "Host");
+            }
+            return true;
+        }
 
 
     }

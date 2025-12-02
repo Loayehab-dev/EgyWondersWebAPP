@@ -28,6 +28,6 @@ namespace EgyWonders.Interfaces
         Task<string> ForgotPasswordAsync(string email);
         Task<string> ResetPasswordAsync(ResetPasswordDTO dto);
         Task<AuthResponseDto> GoogleLoginAsync(string googleIdToken);
-         
+        Task<bool> PromoteUserToHostAsync(int userId);
     }
 }

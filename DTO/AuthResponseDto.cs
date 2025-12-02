@@ -1,4 +1,6 @@
-﻿namespace EgyWonders.DTO
+﻿using EgyWonders.Models;
+
+namespace EgyWonders.DTO
 {
     public class AuthResponseDto
     {
@@ -10,7 +12,9 @@
         // The Frontend needs this to call /api/listings?userId=5
         public int BusinessUserId { get; set; }
         public DateTime ExpiresAt { get; set; }
+        public string UserId { get; set; } = null!;
 
-        
+
+
     }
 }

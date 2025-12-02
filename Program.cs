@@ -26,7 +26,8 @@ namespace EgyWonders
             builder.Services.AddIdentityCore<ApplicationUser>(options =>
             {
                 options.User.RequireUniqueEmail = true;
-                options.Password.RequireDigit = false;
+                options.SignIn.RequireConfirmedEmail = true;
+                options.Password.RequireDigit = true;
                 options.Password.RequiredLength = 6;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = false;
@@ -121,8 +122,8 @@ namespace EgyWonders
             }
             app.UseRateLimiter();
             app.UseHttpsRedirection();
-            app.UseCors("AllowAll"); 
-
+            app.UseCors("AllowAll");
+            app.UseStaticFiles();
             app.UseAuthentication();
             app.UseAuthorization();
 
