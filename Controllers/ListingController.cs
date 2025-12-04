@@ -1,5 +1,6 @@
 ﻿using EgyWonders.DTO;
 using EgyWonders.Interfaces;
+using EgyWonders.Models;
 using EgyWonders.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,7 @@ namespace EgyWonders.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [EnableRateLimiting("Fixed")]
         public async Task<IActionResult> GetAll()
         {
@@ -36,7 +38,7 @@ namespace EgyWonders.Controllers
         }
 
         //  [FromForm] is mandatory for File Uploads
-        [HttpPost]
+      
         [HttpPost]
         [Authorize(Roles = "Host, Admin")]
         public async Task<IActionResult> Create([FromForm] ListingCreateDTO dto)
@@ -86,5 +88,24 @@ namespace EgyWonders.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromQuery] string status)
+        {
+            if (string.IsNullOrEmpty(status))
+                return BadRequest("Status is required.");
+
+            // Call the Service
+            var success = await _listingService.UpdateListingStatusAsync(id, status);
+
+            if (!success)
+            {
+                return NotFound(new { message = "Listing not found." });
+            }
+
+            return Ok(new { message = $"Status updated to {status} successfully." });
+        }
+
+
     }
 }

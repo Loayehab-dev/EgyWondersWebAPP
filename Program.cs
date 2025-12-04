@@ -103,6 +103,8 @@ namespace EgyWonders
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddTransient<IEmailService, EmailService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<IAdminService, AdminService>();
+            builder.Services.AddScoped<IHostDashbordService, HostDashboardService>();
 
 
 

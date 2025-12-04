@@ -10,5 +10,6 @@ namespace EgyWonders.Services
         Task<ListingDTO> UpdateListingAsync(int id, ListingUpdateDTO dto);
         Task<bool> DeleteListingAsync(int id);
         Task<bool> DeletePhotoAsync(int photoId);
+        Task<bool> UpdateListingStatusAsync(int id, string newStatus);
     }
 }

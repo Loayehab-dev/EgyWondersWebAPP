@@ -19,55 +19,68 @@ namespace EgyWonders.Services
         }
         public async Task<PaymentDto> PayForListingBookingAsync(PaymentCreateDto dto)
         {
-            // 1. Validate Booking Exists
+            // 1. Get Booking
             var booking = await _uow.Repository<ListingBooking>().GetByIdAsync(dto.BookingId);
             if (booking == null) throw new Exception("Booking not found.");
 
-            // 2. Validate Status
-            if (booking.Status == "Paid" || booking.Status == "Cancelled")
-                throw new Exception($"Booking is already {booking.Status}.");
+            // 2. Check Status
+            if (booking.Status == "Confirmed" || booking.Status == "Paid")
+                return new PaymentDto { Status = booking.Status, Amount = booking.TotalPrice, BookingId = booking.BookId };
 
-            // 3. Validate Amount (Simple simulation)
-            if (dto.Amount != booking.TotalPrice)
-                throw new Exception($"Incorrect amount. Expected: {booking.TotalPrice}");
+            // 3. Relaxed Amount Check (Prevents decimal errors)
+            if (Math.Abs(dto.Amount - booking.TotalPrice) > 0.1m)
+                throw new Exception($"Amount mismatch. Expected: {booking.TotalPrice}, Got: {dto.Amount}");
 
             // 4. Create Payment Record
             var payment = new Payment
             {
-                BookingId = dto.BookingId,
+                BookingId = dto.BookingId, // Maps to BookID
                 Amount = dto.Amount,
                 PaymentMethod = dto.PaymentMethod,
+
+                // ★ IMPORTANT: Save the Transaction ID here! ★
+                TransactionId = dto.TransactionId ?? "Manual",
+
                 PaymentDate = DateTime.UtcNow,
                 Status = "Completed"
             };
 
-            // 5. Update Booking Status
-            booking.Status = "Paid";
+            // 5. Update Status
+            booking.Status = "Confirmed";
 
-            // 6. Save Everything
+            // 6. Save to DB
             _uow.Repository<ListingBooking>().Update(booking);
             _uow.Repository<Payment>().Add(payment);
-
             await _uow.CompleteAsync();
-            await SendConfirmationEmail(
-                booking.User.Email,
-                booking.User.FirstName,
-                booking.Listing.Title,
-                dto.Amount,
-                $"From {booking.CheckIn:yyyy-MM-dd} To {booking.CheckOut:yyyy-MM-dd}",
-                $"Guests: {booking.NumberOfGuests}"
-            );
+
+            // 7. Send Email (Safe Mode)
+            try
+            {
+                // Fetch user/listing manually to avoid null reference crashes
+                var user = await _uow.Repository<User>().GetByIdAsync(booking.UserId);
+                var listing = await _uow.Repository<Listing>().GetByIdAsync(booking.ListingId);
+
+                if (user != null && listing != null)
+                {
+                    await SendConfirmationEmail(
+                        user.Email, user.FirstName, listing.Title, dto.Amount,
+                        $"From {booking.CheckIn:yyyy-MM-dd} To {booking.CheckOut:yyyy-MM-dd}",
+                        $"Guests: {booking.NumberOfGuests}"
+                    );
+                }
+            }
+            catch { /* Ignore email errors */ }
+
             return new PaymentDto
             {
                 PaymentId = payment.PaymentId,
-                BookingId = payment.BookingId ?? 0,
+                BookingId = payment.BookingId,
                 Amount = payment.Amount,
                 Method = payment.PaymentMethod,
                 Status = payment.Status,
                 PaymentDate = payment.PaymentDate
             };
         }
-
         public async Task<IEnumerable<PaymentDto>> GetPaymentsByBookingIdAsync(int bookingId)
         {
             var payments = await _uow.Repository<Payment>().GetAllAsync(p => p.BookingId == bookingId);
@@ -75,7 +88,7 @@ namespace EgyWonders.Services
             return payments.Select(p => new PaymentDto
             {
                 PaymentId = p.PaymentId,
-                BookingId = p.BookingId ?? 0,
+                BookingId = p.BookingId ,
                 Amount = p.Amount,
                 Method = p.PaymentMethod,
                 Status = p.Status,

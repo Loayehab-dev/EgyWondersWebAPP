@@ -63,5 +63,28 @@ public async Task<IActionResult> Upload([FromForm] HostDocumentCreateDTO dto)
             if (!deleted) return NotFound(new { message = "Document not found" });
             return Ok(new { message = "Document deleted successfully" });
         }
+
+        [Authorize(Roles = "Admin")] // ONLY admins can access this endpoint
+        [HttpPost("approve/{documentId}")]
+        public async Task<IActionResult> ApproveDocument(int documentId)
+        {
+            var success = await _documentService.ApproveDocumentAsync(documentId);
+
+            if (success)
+            {
+                return Ok(new { message = "Document approved and user promoted to Host." });
+            }
+
+            // Return 404 if the document was not found or already processed.
+            return NotFound(new { message = "Failed to approve document. It may not exist or cannot be verified." });
+        }
+        [Authorize(Roles = "Admin")]
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPending()
+        {
+            var documents = await _documentService.GetPendingDocumentsAsync();
+            return Ok(documents); // This sends the list of documents to the MVC app
+        }
+
     }
 }

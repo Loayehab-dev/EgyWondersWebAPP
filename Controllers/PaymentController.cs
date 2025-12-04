@@ -20,9 +20,8 @@ namespace EgyWonders.Controllers
             _paymentService = paymentService;
         }
 
-        // POST: api/Payments/listing
         [HttpPost("listing")]
-        public async Task<IActionResult> PayListing(PaymentCreateDto dto)
+        public async Task<IActionResult> PayListing([FromBody] PaymentCreateDto dto)
         {
             try
             {
@@ -31,7 +30,14 @@ namespace EgyWonders.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+              
+                var realError = ex;
+                while (realError.InnerException != null)
+                {
+                    realError = realError.InnerException;
+                }
+
+                return BadRequest( );
             }
         }
 

@@ -11,5 +11,7 @@ namespace EgyWonders.Services
 
        
         Task<bool> DeleteDocumentAsync(int documentId);
+        Task<bool> ApproveDocumentAsync(int documentId);
+        Task<IEnumerable<HostDocumentDTO>> GetPendingDocumentsAsync();
     }
 }

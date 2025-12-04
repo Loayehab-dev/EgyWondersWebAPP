@@ -9,7 +9,8 @@ namespace EgyWonders.DTO
 
         [Required]
         public decimal PricePerNight { get; set; }
-
+        public decimal CityLongitude { get; set; }
+        public decimal CityLatitude { get; set; }
         public string? CityName { get; set; }
         public string? Category { get; set; }
         public int Capacity { get; set; }

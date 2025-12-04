@@ -92,7 +92,9 @@ namespace EgyWonders.Services
                 Title = dto.Title,
                 PricePerNight = dto.PricePerNight,
                 CityName = dto.CityName,
-                Status = "Active",
+                CityLongitude = dto.CityLongitude,
+                CityLatitude = dto.CityLatitude,
+                Status = "Pending",
                 Category = dto.Category,
                 UserId = dto.UserId,
                 CreatedAt = DateTime.UtcNow,
@@ -259,6 +261,23 @@ namespace EgyWonders.Services
 
             // 3. Remove from Database
             _uow.Repository<ListingPhoto>().Remove(photo);
+            await _uow.CompleteAsync();
+
+            return true;
+        }
+        public async Task<bool> UpdateListingStatusAsync(int id, string newStatus)
+        {
+            // 1. Get the listing from the repo
+            var listing = await _uow.Repository<Listing>().GetByIdAsync(id);
+
+            // 2. If it doesn't exist, return false
+            if (listing == null) return false;
+
+            // 3. Update the status
+            listing.Status = newStatus;
+
+            // 4. Update and Save changes
+            _uow.Repository<Listing>().Update(listing);
             await _uow.CompleteAsync();
 
             return true;

@@ -194,25 +194,26 @@ public partial class TravelDbContext : IdentityDbContext<ApplicationUser>
 
         modelBuilder.Entity<Payment>(entity =>
         {
+            // 1. Primary Key
             entity.HasKey(e => e.PaymentId).HasName("PK__Payments__9B556A581D315CAB");
-
             entity.Property(e => e.PaymentId).HasColumnName("PaymentID");
+
+            // 2. Properties
             entity.Property(e => e.Amount).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.BookId).HasColumnName("BookID");
-            entity.Property(e => e.BookingId).HasColumnName("BookingID");
-            entity.Property(e => e.PaymentDate)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
+            entity.Property(e => e.PaymentDate).HasDefaultValueSql("(getdate())").HasColumnType("datetime");
             entity.Property(e => e.PaymentMethod).HasMaxLength(50);
             entity.Property(e => e.Status).HasMaxLength(50);
 
-            entity.HasOne(d => d.Book).WithMany(p => p.Payments)
-                .HasForeignKey(d => d.BookId)
-                .HasConstraintName("FK__Payments__BookID__01142BA1");
+            // 3. Foreign Key Mapping (FIXED)
+            // We map the C# property 'BookingId' to the SQL column 'BookID'
+            entity.Property(e => e.BookingId).HasColumnName("BookID");
 
-            entity.HasOne(d => d.Booking).WithMany(p => p.Payments)
-                .HasForeignKey(d => d.BookingId)
-                .HasConstraintName("FK__Payments__Bookin__02084FDA");
+            // 4. Relationship Configuration (FIXED)
+            // HasOne must use the Navigation Property (ListingBooking), NOT the int ID
+            entity.HasOne(d => d.ListingBooking)
+                  .WithMany(p => p.Payments)
+                  .HasForeignKey(d => d.BookingId)
+                  .HasConstraintName("FK__Payments__BookID__01142BA1");
         });
 
         modelBuilder.Entity<Review>(entity =>

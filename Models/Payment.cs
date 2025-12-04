@@ -1,25 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using EgyWonders.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace EgyWonders.Models;
-
-public partial class Payment
+public class Payment
 {
+    [Key]
     public int PaymentId { get; set; }
 
-    public DateTime PaymentDate { get; set; }
-
-    public string? PaymentMethod { get; set; }
+    
+    [Column("BookID")]
+    public int BookingId { get; set; }
 
     public decimal Amount { get; set; }
+    public string PaymentMethod { get; set; }
+    public string Status { get; set; }
+    public DateTime PaymentDate { get; set; }
 
-    public string? Status { get; set; }
+    // This MUST match the column you added in SQL
+    public string TransactionId { get; set; }
 
-    public int? BookId { get; set; }
-
-    public int? BookingId { get; set; }
-
-    public virtual ListingBooking? Book { get; set; }
-
-    public virtual TourBooking? Booking { get; set; }
+    // Navigation Property
+    [ForeignKey("BookingId")]
+    public virtual ListingBooking ListingBooking { get; set; }
 }
