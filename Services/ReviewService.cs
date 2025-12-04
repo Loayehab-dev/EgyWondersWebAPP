@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using EgyWonders.DTO;
 using EgyWonders.Models;
 using EgyWonders.Interfaces;
-using Microsoft.EntityFrameworkCore; // Needed for Includes
+using Microsoft.EntityFrameworkCore;
 
 namespace EgyWonders.Services
 {
@@ -20,7 +20,7 @@ namespace EgyWonders.Services
 
         public async Task<ReviewDTO> CreateReviewAsync(ReviewCreateDTO dto)
         {
-            // 1. Validation: Ensure we are reviewing exactly ONE thing
+            // 1. Validation: Ensure we are reviewing exactly ONE thing (XOR Check)
             if ((dto.ListingId == null && dto.TourId == null) || (dto.ListingId != null && dto.TourId != null))
             {
                 throw new Exception("A review must be linked to either a Listing OR a Tour (not both, not neither).");
@@ -34,14 +34,14 @@ namespace EgyWonders.Services
                 UserId = dto.UserId,
                 ListingId = dto.ListingId,
                 TourId = dto.TourId
+                // Removed CreatedAt as per request
             };
 
             // 3. Save to Database
             _uow.Repository<Review>().Add(review);
             await _uow.CompleteAsync();
 
-            // 4. Fetch details to return a nice DTO
-            // We need the User's name and the Product's title
+            // 4. Fetch details for return
             var user = await _uow.Repository<User>().GetByIdAsync(dto.UserId);
             string targetName = "Unknown";
 
@@ -68,9 +68,10 @@ namespace EgyWonders.Services
 
         public async Task<IEnumerable<ReviewDTO>> GetReviewsByListingIdAsync(int listingId)
         {
+            // ★ FIX: Use direct arguments instead of named parameters
             var reviews = await _uow.Repository<Review>().GetAllAsync(
-                filter: r => r.ListingId == listingId,
-                includes: x => x.User // Include user to get names
+                r => r.ListingId == listingId, // Filter
+                r => r.User                    // Include User
             );
 
             return reviews.Select(r => new ReviewDTO
@@ -78,16 +79,19 @@ namespace EgyWonders.Services
                 ReviewId = r.ReviewId,
                 Rating = r.Rating,
                 Comment = r.Comment,
-                GuestName = $"{r.User.FirstName} {r.User.LastName}",
+                // Handle null User just in case
+                GuestName = r.User != null ? $"{r.User.FirstName} {r.User.LastName}" : "Anonymous",
                 TargetName = "Listing Review"
-            }).ToList();
+                // CreatedAt removed
+            }).OrderByDescending(r => r.ReviewId).ToList(); // Sort by ID (Newest first)
         }
 
         public async Task<IEnumerable<ReviewDTO>> GetReviewsByTourIdAsync(int tourId)
         {
+            // ★ FIX: Use direct arguments
             var reviews = await _uow.Repository<Review>().GetAllAsync(
-                filter: r => r.TourId == tourId,
-                includes: x => x.User
+                r => r.TourId == tourId,       // Filter
+                r => r.User                    // Include User
             );
 
             return reviews.Select(r => new ReviewDTO
@@ -95,9 +99,10 @@ namespace EgyWonders.Services
                 ReviewId = r.ReviewId,
                 Rating = r.Rating,
                 Comment = r.Comment,
-                GuestName = $"{r.User.FirstName} {r.User.LastName}",
+                GuestName = r.User != null ? $"{r.User.FirstName} {r.User.LastName}" : "Anonymous",
                 TargetName = "Tour Review"
-            }).ToList();
+                // CreatedAt removed
+            }).OrderByDescending(r => r.ReviewId).ToList(); // Sort by ID (Newest first)
         }
 
         public async Task<bool> DeleteReviewAsync(int reviewId)

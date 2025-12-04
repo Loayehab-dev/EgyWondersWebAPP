@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using EgyWonders.DTO;
+using EgyWonders.Interfaces;
+using EgyWonders.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions; // Required for Expression<Func<...>>
 using System.Threading.Tasks;
-using EgyWonders.DTO;
-using EgyWonders.Models;
-using EgyWonders.Interfaces;
 
 namespace EgyWonders.Services
 {
@@ -27,7 +28,8 @@ namespace EgyWonders.Services
             var listings = await _uow.Repository<Listing>().GetAllAsync(
                 null,
                 x => x.ListingPhotos,
-                x => x.Amenities
+                x => x.Amenities,
+                x => x.Reviews // Include Reviews for Rating Calculation
             );
 
             return listings.Select(l => new ListingDTO
@@ -41,8 +43,12 @@ namespace EgyWonders.Services
                 UserId = l.UserId,
                 Capacity = l.Capacity,
                 AmenityNames = l.Amenities.Select(a => a.AmenityName).ToList(),
+
+                // ★ DYNAMIC RATING LOGIC ★
+                AverageRating = (l.Reviews != null && l.Reviews.Any()) ? l.Reviews.Average(r => r.Rating) : 0,
+                ReviewCount = l.Reviews?.Count ?? 0,
+
                 // Show only 1st photo as thumbnail
-            
                 Photos = l.ListingPhotos.Take(1).Select(p => new ListingPhotoDTO
                 {
                     PhotoId = p.PhotoId,
@@ -52,22 +58,30 @@ namespace EgyWonders.Services
             });
         }
 
-        
         public async Task<ListingDTO> GetListingByIdAsync(int id)
         {
             var result = await _uow.Repository<Listing>().GetAllAsync(
                 x => x.ListingId == id,
                 x => x.ListingPhotos,
-                x => x.Amenities
+                x => x.Amenities,
+                x => x.Reviews // Include Reviews
             );
 
             var entity = result.FirstOrDefault();
             if (entity == null) return null;
 
+            // Calculate Rating Logic
+            double avgRating = 0;
+            if (entity.Reviews != null && entity.Reviews.Any())
+            {
+                avgRating = entity.Reviews.Average(r => r.Rating);
+            }
+
             return new ListingDTO
             {
                 ListingId = entity.ListingId,
                 Title = entity.Title,
+                Description = entity.Description, // Ensure description is mapped
                 PricePerNight = entity.PricePerNight,
                 CityName = entity.CityName,
                 Status = entity.Status,
@@ -75,16 +89,31 @@ namespace EgyWonders.Services
                 UserId = entity.UserId,
                 Capacity = entity.Capacity,
                 AmenityNames = entity.Amenities.Select(a => a.AmenityName).ToList(),
+
+                // Map Ratings
+                AverageRating = avgRating,
+                ReviewCount = entity.Reviews?.Count ?? 0,
+
+                // Map Photos
                 Photos = entity.ListingPhotos.Select(p => new ListingPhotoDTO
                 {
                     PhotoId = p.PhotoId,
                     Url = p.Url,
                     Caption = p.Caption
-                }).ToList()
+                }).ToList(),
+
+                // Map Reviews
+                Reviews = entity.Reviews?.Select(r => new ReviewDTO
+                {
+                    ReviewId = r.ReviewId,
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    // Handle potential null User
+                    GuestName = r.User != null ? r.User.FirstName : "Guest"
+                }).OrderByDescending(r => r.ReviewId).ToList() ?? new List<ReviewDTO>()
             };
         }
 
-       
         public async Task<ListingDTO> CreateListingAsync(ListingCreateDTO dto)
         {
             var listing = new Listing
@@ -119,10 +148,8 @@ namespace EgyWonders.Services
             return await GetListingByIdAsync(listing.ListingId);
         }
 
-       
         public async Task<ListingDTO> UpdateListingAsync(int id, ListingUpdateDTO dto)
         {
-            // Load Listing with relations so we can update them
             var result = await _uow.Repository<Listing>().GetAllAsync(
                 x => x.ListingId == id,
                 x => x.Amenities,
@@ -132,7 +159,7 @@ namespace EgyWonders.Services
             var listing = result.FirstOrDefault();
             if (listing == null) throw new Exception("Listing not found");
 
-            // A. Update Text Fields (Only if provided)
+            // A. Update Text Fields
             if (dto.Title != null) listing.Title = dto.Title;
             if (dto.PricePerNight.HasValue) listing.PricePerNight = dto.PricePerNight.Value;
             if (dto.CityName != null) listing.CityName = dto.CityName;
@@ -143,13 +170,10 @@ namespace EgyWonders.Services
             // B. Add NEW Photos
             await ProcessPhotos(dto.NewPhotos, listing);
 
-            // C.  (Replace old list with new list)
+            // C. Update Amenities
             if (dto.AmenityIds != null)
             {
-                // Clear current links
                 listing.Amenities.Clear();
-
-                // Add new links
                 if (dto.AmenityIds.Any())
                 {
                     var newAmenities = await _uow.Repository<Amenity>()
@@ -165,13 +189,11 @@ namespace EgyWonders.Services
             return await GetListingByIdAsync(id);
         }
 
-      
         public async Task<bool> DeleteListingAsync(int id)
         {
-            // We need Bookings (to check safety) and Photos (to delete files)
             var result = await _uow.Repository<Listing>().GetAllAsync(
                 filter: x => x.ListingId == id,
-                includes: new System.Linq.Expressions.Expression<Func<Listing, object>>[]
+                includes: new Expression<Func<Listing, object>>[]
                 {
                     x => x.ListingBookings,
                     x => x.ListingPhotos
@@ -192,7 +214,6 @@ namespace EgyWonders.Services
             {
                 foreach (var photo in listing.ListingPhotos)
                 {
-                    // URL is like "/uploads/abc.jpg". We need physical path.
                     if (!string.IsNullOrEmpty(photo.Url))
                     {
                         var fileName = Path.GetFileName(photo.Url);
@@ -211,7 +232,70 @@ namespace EgyWonders.Services
             return true;
         }
 
-        //helper method to process photo uploads
+        public async Task<bool> DeletePhotoAsync(int photoId)
+        {
+            var photo = await _uow.Repository<ListingPhoto>().GetByIdAsync(photoId);
+            if (photo == null) return false;
+
+            if (!string.IsNullOrEmpty(photo.Url))
+            {
+                var fileName = Path.GetFileName(photo.Url);
+                var physicalPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", fileName);
+
+                if (File.Exists(physicalPath))
+                {
+                    File.Delete(physicalPath);
+                }
+            }
+
+            _uow.Repository<ListingPhoto>().Remove(photo);
+            await _uow.CompleteAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateListingStatusAsync(int id, string newStatus)
+        {
+            var listing = await _uow.Repository<Listing>().GetByIdAsync(id);
+            if (listing == null) return false;
+
+            listing.Status = newStatus;
+            _uow.Repository<Listing>().Update(listing);
+            await _uow.CompleteAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<ListingDTO>> GetListingsByUserIdAsync(int userId)
+        {
+            var listings = await _uow.Repository<Listing>().GetAllAsync(
+                l => l.UserId == userId,
+                l => l.ListingPhotos,
+                l => l.Amenities,
+                l => l.Reviews
+            );
+
+            return listings.Select(l => new ListingDTO
+            {
+                ListingId = l.ListingId,
+                Title = l.Title,
+                PricePerNight = l.PricePerNight,
+                CityName = l.CityName,
+                Status = l.Status,
+                Category = l.Category,
+                Capacity = l.Capacity,
+                UserId = l.UserId,
+
+                AverageRating = (l.Reviews != null && l.Reviews.Any()) ? l.Reviews.Average(r => r.Rating) : 0,
+                ReviewCount = l.Reviews?.Count ?? 0,
+
+                Photos = l.ListingPhotos?.Select(p => new ListingPhotoDTO
+                {
+                    PhotoId = p.PhotoId,
+                    Url = p.Url
+                }).ToList() ?? new List<ListingPhotoDTO>()
+            });
+        }
+
+        // Helper Method
         private async Task ProcessPhotos(List<IFormFile> files, Listing listing)
         {
             if (files != null && files.Any())
@@ -239,48 +323,6 @@ namespace EgyWonders.Services
                     }
                 }
             }
-        }
-        public async Task<bool> DeletePhotoAsync(int photoId)
-        {
-            // 1. Find the photo
-            var photo = await _uow.Repository<ListingPhoto>().GetByIdAsync(photoId);
-            if (photo == null) return false;
-
-            // 2. Delete the physical file from "wwwroot/uploads"
-            if (!string.IsNullOrEmpty(photo.Url))
-            {
-                // Convert "/uploads/abc.jpg" -> "C:\...\wwwroot\uploads\abc.jpg"
-                var fileName = Path.GetFileName(photo.Url);
-                var physicalPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", fileName);
-
-                if (File.Exists(physicalPath))
-                {
-                    File.Delete(physicalPath);
-                }
-            }
-
-            // 3. Remove from Database
-            _uow.Repository<ListingPhoto>().Remove(photo);
-            await _uow.CompleteAsync();
-
-            return true;
-        }
-        public async Task<bool> UpdateListingStatusAsync(int id, string newStatus)
-        {
-            // 1. Get the listing from the repo
-            var listing = await _uow.Repository<Listing>().GetByIdAsync(id);
-
-            // 2. If it doesn't exist, return false
-            if (listing == null) return false;
-
-            // 3. Update the status
-            listing.Status = newStatus;
-
-            // 4. Update and Save changes
-            _uow.Repository<Listing>().Update(listing);
-            await _uow.CompleteAsync();
-
-            return true;
         }
     }
 }

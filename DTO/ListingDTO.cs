@@ -12,8 +12,10 @@ namespace EgyWonders.DTO
         public string Category { get; set; }
         public int UserId { get; set; } // The host ID
         public int Capacity { get; set; }
-
-
+        public string Description { get; set; }
+        public double AverageRating { get; set; }
+        public int ReviewCount { get; set; }
+        public List<ReviewDTO> Reviews { get; set; } = new List<ReviewDTO>();
         public List<ListingPhotoDTO> Photos { get; set; }
         public List<string> AmenityNames { get; set; } = new List<string>();
         public List<int> AmenityIds { get; set; } = new List<int>();

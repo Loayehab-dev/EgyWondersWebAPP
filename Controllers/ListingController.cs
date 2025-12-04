@@ -23,11 +23,17 @@ namespace EgyWonders.Controllers
         [HttpGet]
         [AllowAnonymous]
         [EnableRateLimiting("Fixed")]
+      
         public async Task<IActionResult> GetAll()
         {
             var listings = await _listingService.GetAllListingsAsync();
-            return Ok(listings);
+
+            // Filter the list in memory
+            var activeListings = listings.Where(l => l.Status == "Active").ToList();
+
+            return Ok(activeListings);
         }
+
         [EnableRateLimiting("Fixed")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
@@ -104,6 +110,27 @@ namespace EgyWonders.Controllers
             }
 
             return Ok(new { message = $"Status updated to {status} successfully." });
+        }
+        [HttpGet("host/{userId}")]
+        [Authorize(Roles = "Host")]
+        public async Task<IActionResult> GetHostListings(int userId)
+        {
+            // Security Check: Ensure the logged-in user matches the requested ID
+            // (Optional but recommended for security)
+
+            var listings = await _listingService.GetListingsByUserIdAsync(userId);
+            return Ok(listings);
+        }
+        // GET: api/Listings/admin/all
+        // Inside ListingsController.cs
+
+        [HttpGet("admin/all")] // URL: api/Listings/admin/all
+        [Authorize(Roles = "Admin")] // Must be Admin
+        public async Task<IActionResult> GetAllForAdmin()
+        {
+            // This fetches ALL listings (Pending & Active)
+            var listings = await _listingService.GetAllListingsAsync();
+            return Ok(listings);
         }
 
 

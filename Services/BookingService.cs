@@ -97,16 +97,43 @@ namespace EgyWonders.Services
 
         public async Task<IEnumerable<BookingDTO>> GetUserBookingsAsync(int userId)
         {
-            var bookings = await _uow.Repository<ListingBooking>().GetAllAsync(
-                filter: b => b.UserId == userId,
-                includes: new Expression<Func<ListingBooking, object>>[] { x => x.Listing, x => x.User }
-            );
-            return bookings.Select(b => MapToDto(b, b.Listing.Title, b.User));
+            var bookings = await _uow.Repository<ListingBooking>().GetAllAsync(b => b.UserId == userId);
+            var list = new List<BookingDTO>();
+
+            foreach (var b in bookings)
+            {
+                // ★ FETCH LISTING WITH PHOTOS ★
+                // We use GetAllAsync with a filter to Include the Photos table
+                var listingResult = await _uow.Repository<Listing>().GetAllAsync(
+                    l => l.ListingId == b.ListingId,
+                    l => l.ListingPhotos
+                );
+                var listing = listingResult.FirstOrDefault();
+
+                
+                string photoUrl = listing?.ListingPhotos?.FirstOrDefault()?.Url;
+
+                list.Add(new BookingDTO
+                {
+                    BookId = b.BookId,
+                    ListingId = b.ListingId,
+                    ListingTitle = listing != null ? listing.Title : "Unknown Listing",
+
+                   
+                    ListingPhotoUrl = photoUrl,
+
+                    CheckIn = b.CheckIn,
+                    CheckOut = b.CheckOut,
+                    TotalPrice = b.TotalPrice,
+                    Status = b.Status
+                });
+            }
+
+            return list;
         }
 
-       
         // 3. UPDATE OPERATION
-      
+
         public async Task<BookingDTO> UpdateBookingAsync(int bookingId, BookingUpdateDTO dto)
         {
             var booking = (await _uow.Repository<ListingBooking>().GetAllAsync(
