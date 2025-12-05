@@ -1,0 +1,127 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model List<MVC_front_End_.Models.ListingDTO>
+
+@{
+    ViewData["Title"] = "Manage Listings";
+    Layout = "~/Views/Shared/_HostLayout.cshtml";
+}
+
+<div class="dashboard-content">
+    
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">My Listings</h4>
+            <p class="text-muted small mb-0">Manage and edit your properties</p>
+        </div>
+        <a asp-action="CreateListing" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Create New
+        </a>
+    </div>
+
+    <!-- Listings Table Card -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4 py-3 border-0">Property</th>
+                            <th class="py-3 border-0">Location</th>
+                            <th class="py-3 border-0">Price/Night</th>
+                            <th class="py-3 border-0">Status</th>
+                            <th class="py-3 border-0 text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <!-- Property Info -->
+                                    <td class="ps-4 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-light rounded overflow-hidden flex-shrink-0" style="width: 60px; height: 45px;">
+                                                @if (item.Photos != null && item.Photos.Any())
+                                                {
+                                                    <img src="https://localhost:7151@(item.Photos[0].Url)" 
+                                                         style="width: 100%; height: 100%; object-fit: cover;"
+                                                         onerror="this.src='https://via.placeholder.com/60?text=IMG'">
+                                                }
+                                                else
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                                        <i class="bi bi-image"></i>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="ms-3">
+                                                <div class="fw-bold text-dark">@item.Title</div>
+                                                <div class="small text-muted">@item.Category • @item.Capacity Guests</div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Location -->
+                                    <td class="text-secondary">
+                                        <i class="bi bi-geo-alt me-1"></i> @item.CityName
+                                    </td>
+
+                                    <!-- Price -->
+                                    <td class="fw-bold text-dark">
+                                        $@item.PricePerNight.ToString("N0")
+                                    </td>
+
+                                    <!-- Status Badge -->
+                                    <td>
+                                        @{
+                                            var statusClass = item.Status == "Active" ? "bg-success bg-opacity-10 text-success" : "bg-warning bg-opacity-10 text-warning";
+                                        }
+                                        <span class="badge @statusClass rounded-pill px-3 py-2 border-0">
+                                            @item.Status
+                                        </span>
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a asp-action="EditListing" asp-route-id="@item.ListingId" 
+                                               class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            
+                                            <form asp-action="DeleteListing" asp-route-id="@item.ListingId" method="post" 
+                                                  onsubmit="return confirm('Delete this listing permanently?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-house-door fa-2x mb-3 d-block"></i>
+                                        <h6>No listings found</h6>
+                                        <p class="small">Create your first property listing to get started.</p>
+                                        <a asp-action="CreateListing" class="btn btn-sm btn-primary mt-2">Create Listing</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

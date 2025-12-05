@@ -1,0 +1,196 @@
+﻿@using MVC_front_End_.Models
+@model IEnumerable<ListingDTO>
+
+@{
+    ViewData["Title"] = "Discover Authentic Egyptian Tourism";
+}
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .min-w-100 { min-width: 80px; cursor: pointer; opacity: 0.7; transition: 0.2s; }
+    .min-w-100:hover { opacity: 1; transform: scale(1.05); }
+</style>
+<section class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="container">
+        <div class="row align-items-center min-vh-100">
+            <div class="col-lg-10 mx-auto text-center hero-content">
+                <h1 class="hero-title animate-fade-in">Discover Authentic Egyptian Tourism, Your Way</h1>
+                <p class="hero-subtitle animate-fade-in-delay">
+                    From ancient wonders to hidden gems — explore, stay, and connect.
+                </p>
+
+                <div class="search-card-hero animate-slide-up">
+                    <form class="search-form-hero" asp-controller="Listing" asp-action="Index" method="get">
+                        <div class="row g-0 align-items-end">
+                            <div class="col-lg-3 col-md-6">
+                                <div class="search-field">
+                                    <label class="search-label">Destination</label>
+                                    <div class="search-input-wrapper">
+                                        <i class="bi bi-geo-alt search-icon-sm"></i>
+                                        <input type="text" class="form-control-hero" placeholder="Where to?" name="search" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="search-field">
+                                    <label class="search-label">Check-in</label>
+                                    <div class="search-input-wrapper">
+                                        <i class="bi bi-calendar3 search-icon-sm"></i>
+                                        <input type="date" class="form-control-hero" name="checkIn" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="search-field">
+                                    <label class="search-label">Type</label>
+                                    <div class="search-input-wrapper">
+                                        <select class="form-control-hero" name="category">
+                                            <option value="">Select type</option>
+                                            <option value="Apartment">Apartment</option>
+                                            <option value="Villa">Villa</option>
+                                            <option value="Hotel">Hotel</option>
+                                            <option value="Cabin">Cabin</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <button type="submit" class="btn-search-hero w-100">
+                                    <i class="bi bi-search me-2"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="scroll-indicator">
+        <i class="bi bi-chevron-down"></i>
+    </div>
+</section>
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold">Explore by Category</h4>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary rounded-circle btn-sm p-2" id="scrollLeft"><i class="bi bi-chevron-left"></i></button>
+                <button class="btn btn-outline-secondary rounded-circle btn-sm p-2" id="scrollRight"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <div class="d-flex gap-4 overflow-auto pb-3 no-scrollbar" id="categoryScroll" style="scroll-behavior: smooth;">
+            
+            <a asp-controller="Listing" asp-action="Index" asp-route-category="Coastal" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-water fs-2 text-primary"></i>
+                </div>
+                <small class="fw-bold">Coastal</small>
+            </a>
+
+            <a asp-controller="Listing" asp-action="Index" asp-route-category="Historical" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-bank fs-2 text-warning"></i>
+                </div>
+                <small class="fw-bold">Historical</small>
+            </a>
+
+            <a asp-controller="Listing" asp-action="Index" asp-route-category="Desert" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-sun fs-2 text-danger"></i>
+                </div>
+                <small class="fw-bold">Desert</small>
+            </a>
+
+            <a asp-controller="Listing" asp-action="Index" asp-route-category="Apartment" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-buildings fs-2 text-secondary"></i>
+                </div>
+                <small class="fw-bold">City Views</small>
+            </a>
+
+            <a asp-controller="Listing" asp-action="Index" asp-route-category="Villa" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-gem fs-2 text-info"></i>
+                </div>
+                <small class="fw-bold">Luxe</small>
+            </a>
+             <a asp-controller="Listing" asp-action="Index" asp-route-category="Cabin" class="text-decoration-none text-dark text-center min-w-100">
+                <div class="category-icon mb-2">
+                    <i class="bi bi-tree fs-2 text-success"></i>
+                </div>
+                <small class="fw-bold">Nature</small>
+            </a>
+        </div>
+    </div>
+</section>
+<section id="experiences" class="unforgettable-section py-5 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="unforgettable-title">Unforgettable Egyptian Experiences</h2>
+            <p class="unforgettable-subtitle">Create memories that will last a lifetime</p>
+        </div>
+
+        <div class="row g-4">
+            @if (Model != null && Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div style="height: 250px; overflow: hidden; position: relative;">
+                                @if (item.Photos != null && item.Photos.Any())
+                                {
+                                    <img src="https://localhost:7151@(item.Photos.First().Url)" 
+                                         class="card-img-top w-100 h-100" 
+                                         style="object-fit: cover;" 
+                                         alt="@item.Title"
+                                         onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+                                }
+                                else
+                                {
+                                    <img src="https://via.placeholder.com/400x300?text=No+Image" class="card-img-top w-100 h-100" style="object-fit: cover;">
+                                }
+                                
+                                <div class="badge bg-white text-dark position-absolute top-0 start-0 m-3 px-3 py-2 rounded-pill fw-bold shadow-sm">
+                                    $@item.PricePerNight.ToString("N0") / night
+                                </div>
+                            </div>
+                            
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold mb-1 text-truncate">@item.Title</h5>
+                                <p class="text-muted small mb-3">
+                                    <i class="bi bi-geo-alt-fill me-1 text-primary"></i> @item.CityName
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-light text-secondary border">@item.Category</span>
+                                    <a asp-controller="Listing" asp-action="Details" asp-route-id="@item.ListingId" 
+                                       class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Loading experiences or no listings found...</p>
+                </div>
+            }
+        </div>
+        
+        <div class="text-center mt-5">
+             <a asp-controller="Listing" asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+                View All Experiences
+             </a>
+        </div>
+    </div>
+</section>
+<script>
+    document.getElementById('scrollRight').onclick = () => document.getElementById('categoryScroll').scrollLeft += 200;
+    document.getElementById('scrollLeft').onclick = () => document.getElementById('categoryScroll').scrollLeft -= 200;
+</script>

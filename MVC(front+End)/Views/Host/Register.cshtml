@@ -1,0 +1,89 @@
+﻿@model MVC_front_End_.Models.HostDocumentCreateDTO
+
+@{
+    ViewData["Title"] = "Become a Host";
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">Become a Host</h2>
+                    <p class="text-muted text-center mb-4">
+                        To verify your identity, please upload your National ID and provide your details.
+                    </p>
+
+                    <form asp-action="Register" method="post" enctype="multipart/form-data" id="uploadForm">
+                        
+                        @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div asp-validation-summary="All" class="alert alert-danger text-start" role="alert">
+                                <strong>Please fix the following errors:</strong>
+                            </div>
+                        }
+                        
+                        <div class="mb-3">
+                            <label asp-for="NationalId" class="form-label">National ID Number</label>
+                            <input asp-for="NationalId" class="form-control" placeholder="Enter your 14-digit ID" />
+                            <span asp-validation-for="NationalId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Document" class="form-label">Upload ID Document (Image/PDF)</label>
+                            <input asp-for="Document" type="file" class="form-control" accept="image/*,.pdf" onchange="checkFileSize(this)" />
+                            <div class="form-text">Max size: 5MB. Formats: JPG, PNG, PDF.</div>
+                            <span asp-validation-for="Document" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="TextRecord" class="form-label">Additional Notes (Optional)</label>
+                            <textarea asp-for="TextRecord" class="form-control" rows="3" placeholder="Any extra details..."></textarea>
+                            <span asp-validation-for="TextRecord" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">
+                                <span id="btnText">Submit Application</span>
+                                <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        // 1. Prevent Double Submission & Show Loading Spinner
+        $('#uploadForm').on('submit', function () {
+            // Only disable if the form is valid (client-side validation passed)
+            if ($(this).valid()) {
+                var btn = $('#submitBtn');
+                var text = $('#btnText');
+                var spinner = $('#btnSpinner');
+
+                // Disable button and show spinner
+                btn.prop('disabled', true);
+                text.text('Uploading...');
+                spinner.removeClass('d-none');
+            }
+        });
+
+        // 2. Simple File Size Check (e.g., limit to 5MB)
+        function checkFileSize(input) {
+            if (input.files && input.files[0]) {
+                var fileSize = input.files[0].size / 1024 / 1024; // in MB
+                if (fileSize > 5) {
+                    alert('File size exceeds 5 MB. Please choose a smaller file.');
+                    input.value = ""; // Clear the input
+                }
+            }
+        }
+    </script>
+}

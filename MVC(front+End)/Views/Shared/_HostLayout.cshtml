@@ -1,0 +1,122 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - EgyWondersHost</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+    <link rel="stylesheet" href="~/css/host_dashboard.css"> 
+</head>
+<body>
+    
+    <div class="sidebar">
+        <div class="sidebar-title">
+            <a href="@Url.Action("Index", "Host")" class="sidebar-logo">
+                <div class="sidebar-logo-icon"><i class="bi bi-house"></i></div>
+                <span class="sidebar-logo-text">Egywonders Host</span>
+            </a>
+        </div>
+        <nav>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")" 
+                       asp-controller="Host" asp-action="Index">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-compass-fill"></i>
+                        <span>ReturnGuest</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+    <!-- CHANGE asp-action FROM "Index" TO "MyListings" -->
+    <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "MyListings" ? "active" : "")" 
+       asp-controller="Host" asp-action="MyListings">
+        <i class="bi bi-house"></i>
+        <span>Manage Listings</span>
+    </a>
+</li>
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "CreateListing" ? "active" : "")" 
+                       asp-controller="Host" asp-action="CreateListing">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Create Listing</span>
+                    </a>
+                </li>
+                
+               <!-- Bookings Link -->
+<a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Bookings" ? "active" : "")" 
+   asp-controller="Host" asp-action="Bookings">
+    <i class="bi bi-calendar-check"></i> Bookings
+</a><a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Earnings" ? "active" : "")" 
+   asp-controller="Host" asp-action="Earnings">
+    <i class="bi bi-wallet2"></i> Earnings
+</a>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="top-header">
+        <div class="top-header-left">
+            <h1 class="top-header-brand">Egywonders Host</h1>
+            <p class="top-header-subtitle">Host Dashboard</p>
+        </div>
+        <div class="header-right d-flex align-items-center gap-3">
+            <div class="notification-bell position-relative">
+                <i class="bi bi-bell fs-5"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">3</span>
+            </div>
+            <div class="profile-section d-flex align-items-center gap-2">
+                <img src="https://ui-avatars.com/api/?name=Host+User&background=dc3545&color=fff" alt="Profile" class="rounded-circle" width="40">
+                <span class="profile-name fw-bold small">My Account</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        @RenderBody()
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Configure options
+            toastr.options = {
+                "closeButton": true,
+                "progressBar": true,
+                "positionClass": "toast-top-right",
+                "timeOut": "5000"
+            };
+
+            // Display Success Message
+            var successMsg = '@TempData["SuccessMessage"]';
+            if (successMsg && successMsg !== '') {
+                toastr.success(successMsg);
+            }
+
+            // Display Error Message
+            var errorMsg = '@TempData["ErrorMessage"]';
+            if (errorMsg && errorMsg !== '') {
+                toastr.error(errorMsg);
+            }
+        });
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

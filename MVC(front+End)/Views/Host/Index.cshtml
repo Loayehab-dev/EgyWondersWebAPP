@@ -1,0 +1,217 @@
+﻿@model MVC_front_End_.Models.HostDashboardViewModel
+
+@{
+    ViewData["Title"] = "Host Dashboard";
+    Layout = "~/Views/Shared/_HostLayout.cshtml";
+}
+
+<!-- Header -->
+<div class="header mb-4">
+    <div class="welcome-text h5 text-muted">
+        Welcome back! Here's what's happening with your properties today
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- 1. My Listings -->
+    <div class="col-md-3">
+        <div class="overview-card">
+            <div class="overview-card-header">
+                <h6 class="overview-card-title">My Listings</h6>
+                <div class="overview-card-icon icon-pink"><i class="bi bi-house-door"></i></div>
+            </div>
+            <div class="overview-card-value">@(Model?.TotalListings ?? 0)</div>
+            <div class="overview-card-change text-muted small">Active Properties</div>
+        </div>
+    </div>
+    
+    <!-- 2. Total Bookings -->
+    <div class="col-md-3">
+        <div class="overview-card">
+            <div class="overview-card-header">
+                <h6 class="overview-card-title">Total Bookings</h6>
+                <div class="overview-card-icon icon-teal"><i class="bi bi-calendar"></i></div>
+            </div>
+            <div class="overview-card-value">@(Model?.TotalBookings ?? 0)</div>
+            <div class="overview-card-change text-success small">Lifetime reservations</div>
+        </div>
+    </div>
+    
+    <!-- 3. Earnings -->
+    <div class="col-md-3">
+        <div class="overview-card">
+            <div class="overview-card-header">
+                <h6 class="overview-card-title">Earnings</h6>
+                <div class="overview-card-icon icon-orange"><i class="bi bi-currency-dollar"></i></div>
+            </div>
+            <div class="overview-card-value">$@(Model?.TotalEarnings.ToString("N0") ?? "0")</div>
+            <div class="overview-card-change text-success small">Total Revenue</div>
+        </div>
+    </div>
+    
+    <!-- 4. Rating -->
+    <div class="col-md-3">
+        <div class="overview-card">
+            <div class="overview-card-header">
+                <h6 class="overview-card-title">Rating</h6>
+                <div class="overview-card-icon icon-yellow"><i class="bi bi-star-fill"></i></div>
+            </div>
+            <div class="overview-card-value">@(Model?.AverageRating.ToString("0.0") ?? "0.0")</div>
+            <div class="overview-card-change text-muted small">Average Score</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. MAIN CONTENT ROW -->
+<div class="row g-4 mb-4">
+    
+    <!-- LEFT: YOUR LISTINGS (Fixed Loop & Badge) -->
+    <div class="col-md-6">
+        <div class="section-title d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold h5">Your Listings</span>
+            <!-- FIXED: Button now links to CreateListing -->
+            <a asp-controller="Host" asp-action="CreateListing" class="btn btn-create btn-sm">
+                <i class="bi bi-plus"></i> Create New
+            </a>
+        </div>
+
+        @if (Model != null && Model.Listings != null && Model.Listings.Any())
+        {
+            @foreach (var item in Model.Listings.Take(3)) 
+            {
+                <div class="listing-card">
+                    <div class="listing-card-content">
+                        <div class="bg-light d-flex align-items-center justify-content-center rounded" style="width:100px; height:80px; overflow:hidden;">
+                            <!-- Show first photo if available, else icon -->
+                            @if(item.Photos != null && item.Photos.Any()) {
+                                <img src="https://localhost:7151@(item.Photos[0].Url)" class="listing-img" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://via.placeholder.com/100?text=No+Img'">
+                            } else {
+                                <i class="bi bi-image text-muted fs-1"></i>
+                            }
+                        </div>
+                        <div class="listing-details w-100 ms-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="listing-title fw-bold">@item.Title</div>
+                                <!-- DYNAMIC BADGE -->
+                                <span class="status-badge @(item.Status == "Active" ? "badge-active" : "badge-pending")">
+                                    @item.Status
+                                </span>
+                            </div>
+                            <div class="listing-info text-muted small mt-1">@item.Category • $@item.PricePerNight/night</div>
+                            
+                            <!-- ACTIONS: EDIT & DELETE -->
+                          <div class="listing-actions mt-3 d-flex justify-content-end gap-2 border-top pt-2">
+    
+                    <a asp-controller="Host" asp-action="EditListing" asp-route-id="@item.ListingId" 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111Z            class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 transition-hover">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </a>
+
+                    <form asp-controller="Host" asp-action="DeleteListing" asp-route-id="@item.ListingId" method="post" 
+                          onsubmit="return confirm('Are you sure you want to delete this listing?');" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 transition-hover">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </form>
+</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5 bg-white rounded shadow-sm">
+                <p class="text-muted mb-0">You haven't created any listings yet.</p>
+            </div>
+        }
+    </div>
+
+    <!-- RIGHT: RECENT BOOKINGS -->
+    <div class="col-md-6">
+        <div class="section-title d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold h5">Recent Bookings</span>
+            <a href="#" class="text-decoration-none small">View All</a>
+        </div>
+
+        @if (Model != null && Model.RecentBookings.Any())
+        {
+            @foreach (var b in Model.RecentBookings)
+            {
+                <div class="booking-card mb-3">
+                    <div class="booking-card-content d-flex align-items-center">
+                        <div class="booking-profile-img d-flex align-items-center justify-content-center bg-primary text-white fw-bold fs-5" style="min-width:60px; height:60px; border-radius:8px;">
+                            @(string.IsNullOrEmpty(b.GuestName) ? "?" : b.GuestName.Substring(0,1))
+                        </div>
+                        
+                        <div class="booking-details w-100 ms-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="booking-guest-name fw-bold">@b.GuestName</div>
+                                <span class="booking-price fw-bold text-primary">$@b.Price.ToString("N0")</span>
+                            </div>
+                            <div class="booking-listing text-muted small text-truncate" style="max-width: 200px;">@b.ListingTitle</div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div class="booking-dates small text-secondary">
+                                    <i class="bi bi-calendar me-1"></i> @b.CheckInDate
+                                </div>
+                                <span class="status-badge @(b.Status == "Confirmed" ? "badge-confirmed" : "badge-pending")">
+                                    @b.Status
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted bg-white rounded shadow-sm">
+                <i class="bi bi-calendar-x fa-2x mb-2 d-block"></i>
+                No recent bookings found.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- 3. QUICK ACTIONS -->
+<div class="quick-actions mt-4">
+    <div class="section-title mb-3">
+        <span class="fw-bold h5">Quick Actions</span>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <!-- FIXED: Create Listing Link -->
+            <a asp-controller="Host" asp-action="CreateListing" class="d-block text-center p-3 bg-white rounded shadow-sm text-decoration-none card-hover">
+                <div class="icon-pink mx-auto mb-2" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;">
+                    <i class="bi bi-plus-lg"></i>
+                </div>
+                <div class="text-dark small fw-bold">Create Listing</div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#" class="d-block text-center p-3 bg-white rounded shadow-sm text-decoration-none card-hover">
+                <div class="icon-orange mx-auto mb-2" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div class="text-dark small fw-bold">View Earnings</div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#" class="d-block text-center p-3 bg-white rounded shadow-sm text-decoration-none card-hover">
+                <div class="icon-teal mx-auto mb-2" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;">
+                    <i class="bi bi-chat-dots"></i>
+                </div>
+                <div class="text-dark small fw-bold">Messages</div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#" class="d-block text-center p-3 bg-white rounded shadow-sm text-decoration-none card-hover">
+                <div class="icon-yellow mx-auto mb-2" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;">
+                    <i class="bi bi-bell"></i>
+                </div>
+                <div class="text-dark small fw-bold">Notifications</div>
+            </a>
+        </div>
+    </div>
+</div>

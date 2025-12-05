@@ -1,0 +1,158 @@
+﻿@model MVC_front_End_.Models.ListingCreateDTO
+
+@{
+    ViewData["Title"] = "Create Listing";
+    Layout = "~/Views/Shared/_HostLayout.cshtml";
+    var amenitiesList = ViewBag.Amenities as List<MVC_front_End_.Models.AmenityDTO>;
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+    #map { height: 300px; width: 100%; border-radius: 8px; z-index: 1; }
+</style>
+
+<div class="dashboard-content">
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <form asp-action="CreateListing" method="post" enctype="multipart/form-data">
+                
+                <h6 class="text-primary fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Basic Details</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold">Listing Title</label>
+                        <input asp-for="Title" class="form-control bg-light border-0" placeholder="e.g. Luxury Nile View Apartment" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Category</label>
+                        <select asp-for="Category" class="form-select bg-light border-0">
+                            <option value="Apartment">Apartment</option>
+                            <option value="Villa">Villa</option>
+                            <option value="Hotel">Hotel</option>
+                            <option value="Cabin">Cabin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h6 class="text-primary fw-bold mb-3 mt-4"><i class="bi bi-card-text me-2"></i>Description</h6>
+              
+
+                <h6 class="text-primary fw-bold mb-3 mt-4"><i class="bi bi-geo-alt me-2"></i>Location & Pricing</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Price Per Night ($)</label>
+                        <input asp-for="PricePerNight" type="number" class="form-control bg-light border-0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Guest Capacity</label>
+                        <input asp-for="Capacity" type="number" class="form-control bg-light border-0" />
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">City</label>
+                        <select asp-for="CityName" class="form-select bg-light border-0" id="citySelector">
+                            <option value="">Select City</option>
+                            <option value="Cairo" data-lat="30.0444" data-lng="31.2357">Cairo</option>
+                            <option value="Alexandria" data-lat="31.2001" data-lng="29.9187">Alexandria</option>
+                            <option value="Luxor" data-lat="25.6872" data-lng="32.6396">Luxor</option>
+                            <option value="Aswan" data-lat="24.0889" data-lng="32.8998">Aswan</option>
+                            <option value="Hurghada" data-lat="27.2579" data-lng="33.8116">Hurghada</option>
+                            <option value="Sharm El Sheikh" data-lat="27.9158" data-lng="34.3299">Sharm El Sheikh</option>
+                            <option value="Dahab" data-lat="28.5096" data-lng="34.5136">Dahab</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Pin Location on Map</label>
+                    <div id="map"></div>
+                    <small class="text-muted">Drag the marker to set exact location.</small>
+                    
+                    <input type="hidden" asp-for="CityLatitude" id="latInput" value="30.0444" />
+                    <input type="hidden" asp-for="CityLongitude" id="lngInput" value="31.2357" />
+                </div>
+
+                <h6 class="text-primary fw-bold mb-3 mt-4"><i class="bi bi-stars me-2"></i>Amenities</h6>
+                <div class="mb-4 p-3 bg-light rounded-3">
+                    <div class="row g-3">
+                        @if (amenitiesList != null && amenitiesList.Any())
+                        {
+                            @foreach (var amenity in amenitiesList)
+                            {
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="AmenityIds" value="@amenity.AmenitiesId" id="am_@amenity.AmenitiesId">
+                                        <label class="form-check-label" for="am_@amenity.AmenitiesId">
+                                            @amenity.AmenityName
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3">
+    <label asp-for="Photos" class="form-label fw-bold">Upload Photos</label>
+    
+    <input asp-for="Photos" type="file" multiple class="form-control" accept="image/*" />
+    
+    <span asp-validation-for="Photos" class="text-danger"></span>
+    <small class="text-muted">You can select multiple images at once.</small>
+</div>
+
+                <button type="submit" class="btn btn-primary px-5 py-2">Create Listing</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Initialize Map (Default: Cairo)
+    var defaultLat = 30.0444;
+    var defaultLng = 31.2357;
+
+    var map = L.map('map').setView([defaultLat, defaultLng], 13);
+
+    // 2. Add OpenStreetMap Tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 3. Add Draggable Marker
+    var marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+    // 4. Function to update hidden inputs
+    function updateInputs(lat, lng) {
+        document.getElementById('latInput').value = lat;
+        document.getElementById('lngInput').value = lng;
+    }
+
+    // 5. Listen for Drag End
+    marker.on('dragend', function (e) {
+        var position = marker.getLatLng();
+        updateInputs(position.lat, position.lng);
+    });
+
+    // 6. Listen for Map Click
+    map.on('click', function(e) {
+        marker.setLatLng(e.latlng);
+        updateInputs(e.latlng.lat, e.latlng.lng);
+    });
+
+    // 7. Update Map when City is selected
+    document.getElementById('citySelector').addEventListener('change', function() {
+        var selectedOption = this.options[this.selectedIndex];
+        var newLat = selectedOption.getAttribute('data-lat');
+        var newLng = selectedOption.getAttribute('data-lng');
+
+        if(newLat && newLng) {
+            var newLatLng = new L.LatLng(newLat, newLng);
+            marker.setLatLng(newLatLng);
+            map.setView(newLatLng, 12);
+            updateInputs(newLat, newLng);
+        }
+    });
+</script>

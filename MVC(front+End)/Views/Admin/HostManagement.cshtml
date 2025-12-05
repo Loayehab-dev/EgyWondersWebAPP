@@ -1,0 +1,72 @@
+﻿@model List<MVC_front_End_.Models.HostVerificationViewModel> 
+
+@{
+    ViewData["Title"] = "Host Management";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-content">
+    <div class="card-modern">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Applicant Name</th>
+                        <th>National ID</th>
+                        <th>Date</th>
+                        <th>Document</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">@item.ApplicantName</div>
+                                    <small class="text-muted">ID: @item.UserId</small>
+                                </td>
+                                
+                                <td>@item.NationalId</td>
+                                <td>@item.CreatedAt.ToShortDateString()</td>
+                                
+                                <td>
+                                    <a href="https://localhost:7151@(item.DocumentPath)" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        View File <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <form asp-action="ApproveHost" method="post">
+                                            <input type="hidden" name="id" value="@item.DocumentId" />
+                                            <button type="submit" class="btn btn-sm btn-success" title="Approve">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        </form>
+
+                                        <form asp-action="RejectHost" method="post" onsubmit="return confirm('Are you sure?');">
+                                            <input type="hidden" name="id" value="@item.DocumentId" />
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Reject">
+                                                <i class="fas fa-trash"></i> Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No pending requests found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

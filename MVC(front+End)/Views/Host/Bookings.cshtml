@@ -1,0 +1,86 @@
+﻿@model List<MVC_front_End_.Models.HostBookingVM>
+
+@{
+    ViewData["Title"] = "My Bookings";
+    Layout = "~/Views/Shared/_HostLayout.cshtml";
+}
+
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">Bookings</h4>
+            <p class="text-muted small mb-0">Manage your guest reservations</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-white border shadow-sm"><i class="bi bi-download"></i> Export</button>
+            <button class="btn btn-white border shadow-sm"><i class="bi bi-filter"></i> Filter</button>
+        </div>
+    </div>
+
+    <!-- Bookings Card -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4 py-3 border-0">Guest</th>
+                            <th class="py-3 border-0">Property</th>
+                            <th class="py-3 border-0">Dates</th>
+                            <th class="py-3 border-0">Amount</th>
+                            <th class="py-3 border-0">Status</th>
+                            <th class="py-3 border-0 text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width:40px; height:40px;">
+                                                @(string.IsNullOrEmpty(item.GuestName) ? "?" : item.GuestName.Substring(0,1))
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">@item.GuestName</div>
+                                                <div class="small text-muted">New Guest</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-dark fw-medium">@item.ListingTitle</span>
+                                    </td>
+                                    <td class="text-secondary small">
+                                        <i class="bi bi-calendar-event me-1"></i> @item.CheckInDate
+                                    </td>
+                                    <td class="fw-bold text-dark">
+                                        $@item.Price.ToString("N0")
+                                    </td>
+                                    <td>
+                                        <span class="status-badge @(item.Status == "Confirmed" ? "badge-confirmed" : "badge-pending")">
+                                            @item.Status
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-secondary">Details</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-calendar-x fa-2x mb-2 d-block"></i>
+                                    No bookings found.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

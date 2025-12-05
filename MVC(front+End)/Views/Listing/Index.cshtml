@@ -1,0 +1,276 @@
+﻿@using MVC_front_End_.Models
+@model IEnumerable<ListingDTO>
+
+@{
+    ViewData["Title"] = "Stays in Egypt";
+}
+
+<style>
+    :root {
+        --primary-color: #ff385c; /* Airbnb Pink/Red */
+        --text-main: #222222;
+        --text-secondary: #717171;
+        --card-radius: 12px;
+    }
+
+    body {
+        font-family: 'Circular', -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
+        color: var(--text-main);
+        background-color: #fff;
+    }
+
+    /* Sticky Search Bar fix */
+    .stays-search-sticky {
+        padding: 15px 0;
+        background: white;
+        border-bottom: 1px solid #ebebeb;
+        position: sticky;
+        top: 70px; /* Adjust based on your main navbar height */
+        z-index: 99;
+    }
+
+    /* CARD DESIGN */
+    .airbnb-card {
+        border: none;
+        background: transparent;
+        transition: transform 0.2s ease;
+    }
+    
+    .img-frame {
+        position: relative;
+        width: 100%;
+        
+        /* ★ CHANGED: Reduced from 95% to 65% to minimize photo height ★ */
+        padding-top: 65%; 
+        
+        border-radius: var(--card-radius);
+        overflow: hidden;
+        background-color: #f0f0f0;
+        margin-bottom: 12px;
+    }
+
+    .img-frame img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensures photo fills square without stretching */
+        transition: transform 0.3s ease;
+    }
+
+    .airbnb-card:hover .img-frame img {
+        transform: scale(1.03); /* Subtle zoom on hover */
+    }
+
+    /* Heart Icon */
+    .wishlist-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        z-index: 2;
+        filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+    }
+
+    /* Typography */
+    .listing-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 2px;
+        line-height: 1.2;
+    }
+
+    .listing-info {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+    }
+
+    .listing-price {
+        font-size: 1rem;
+        color: var(--text-main);
+        margin-top: 6px;
+    }
+
+    .price-number {
+        font-weight: 600;
+    }
+
+    /* Sidebar Styling */
+    .filter-sidebar {
+        border-right: 1px solid #ebebeb; /* Separator line */
+        padding-right: 2rem;
+        height: 100%;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border-color: #b0b0b0;
+        padding: 10px;
+    }
+    
+    .btn-dark {
+        background-color: #222;
+        border-radius: 8px;
+        padding: 10px 20px;
+    }
+</style>
+
+<div class="container-fluid border-bottom pt-5 mt-4 pb-3">
+    <div class="container">
+        <form class="row g-2 align-items-center" asp-controller="Listing" asp-action="Index" method="get">
+            <div class="col-md-3">
+                <div class="form-floating">
+                    <input name="search" type="text" class="form-control border-0 shadow-sm" id="floatingSearch" placeholder="Location" value="@ViewBag.Search">
+                    <label for="floatingSearch" class="text-muted"><i class="bi bi-search me-2"></i>Where to?</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-floating">
+                    <input name="checkIn" type="date" class="form-control border-0 shadow-sm" id="floatingDate">
+                    <label for="floatingDate" class="text-muted">Check in</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-floating">
+                    <select name="capacity" class="form-select border-0 shadow-sm" id="floatingGuests">
+                        <option value="">Add guests</option>
+                        <option value="1">1 guest</option>
+                        <option value="2">2 guests</option>
+                        <option value="3">3 guests</option>
+                        <option value="4">4+ guests</option>
+                    </select>
+                    <label for="floatingGuests" class="text-muted">Guests</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-danger w-100 h-100 py-3 rounded-4 fw-bold" style="background-color: #ff385c;">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row">
+        
+        <aside class="col-lg-3 d-none d-lg-block">
+            <div class="filter-sidebar sticky-top" style="top: 100px; z-index: 1;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold m-0">Filters</h5>
+                    <a asp-action="Index" class="text-muted small text-decoration-underline">Clear all</a>
+                </div>
+
+                <form asp-action="Index" method="get">
+                    <input type="hidden" name="search" value="@ViewBag.Search" />
+
+                    <div class="mb-4 border-bottom pb-4">
+                        <label class="fw-bold mb-3">Price range</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="form-floating w-100">
+                                <input type="number" name="minPrice" class="form-control" placeholder="Min" id="minP">
+                                <label for="minP" class="small">Min price</label>
+                            </div>
+                            <span>-</span>
+                            <div class="form-floating w-100">
+                                <input type="number" name="maxPrice" class="form-control" placeholder="Max" id="maxP">
+                                <label for="maxP" class="small">Max price</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="fw-bold mb-3">Type of place</label>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="category" value="" id="catAny" checked>
+                                <label class="form-check-label" for="catAny">Any type</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="category" value="Apartment" id="catApt" @(ViewBag.Category == "Apartment" ? "checked" : "")>
+                                <label class="form-check-label" for="catApt">Apartment</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="category" value="Villa" id="catVilla" @(ViewBag.Category == "Villa" ? "checked" : "")>
+                                <label class="form-check-label" for="catVilla">Villa</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="category" value="Hotel" id="catHotel" @(ViewBag.Category == "Hotel" ? "checked" : "")>
+                                <label class="form-check-label" for="catHotel">Hotel</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 mt-2">Show places</button>
+                </form>
+            </div>
+        </aside>
+
+        <div class="col-lg-9">
+            
+            <div class="mb-3">
+                <h5 class="fw-bold">@(Model != null ? Model.Count() : 0) stays in Egypt</h5>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <div class="col">
+                            <a asp-controller="Listing" asp-action="Details" asp-route-id="@item.ListingId" class="text-decoration-none">
+                                <div class="card airbnb-card h-100">
+                                    
+                                    <div class="img-frame">
+                                        <button class="wishlist-btn"><i class="bi bi-heart"></i></button>
+                                        @if (item.Photos != null && item.Photos.Any())
+                                        {
+                                            <img src="https://localhost:7151@(item.Photos.First().Url)" 
+                                                 alt="@item.Title" 
+                                                 onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
+                                        }
+                                        else
+                                        {
+                                            <img src="https://via.placeholder.com/400x400?text=No+Image">
+                                        }
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+                                        <div class="listing-title text-truncate">@item.CityName, Egypt</div>
+                                        
+                                        <div class="small">
+                                            <i class="bi bi-star-fill text-dark me-1"></i>
+                                            @(item.ReviewCount > 0 ? item.AverageRating.ToString("0.0") : "New")
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="listing-info text-truncate">@item.Title</div>
+                                    <div class="listing-info">@item.Category • @item.Capacity guests</div>
+                                    
+                                    <div class="listing-price">
+                                        <span class="price-number">$@item.PricePerNight.ToString("N0")</span> night
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-geo-alt display-4 text-muted mb-3"></i>
+                        <h4>No matches found</h4>
+                        <p class="text-muted">Try changing your filters or search area.</p>
+                        <a asp-action="Index" class="btn btn-outline-dark">Clear filters</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

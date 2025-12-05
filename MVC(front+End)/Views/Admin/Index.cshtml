@@ -1,0 +1,196 @@
+﻿@model MVC_front_End_.Models.DashboardStatsViewModel
+
+@{
+    ViewData["Title"] = "Overview";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="dashboard-content">
+    
+    <!-- STATS CARDS GRID -->
+    <div class="stats-grid">
+        
+        <!-- 1. TOTAL USERS -->
+        <div class="stat-card">
+            <div class="stat-info">
+                <h6>Total Users</h6>
+               
+                <h3>@(Model?.TotalUsers ?? 0)</h3>
+                <span class="stat-trend">Registered Accounts</span>
+            </div>
+            <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+        </div>
+        
+        <!-- 2. TOTAL LISTINGS -->
+        <div class="stat-card">
+            <div class="stat-info">
+                <h6>Total Listings</h6>
+                <!-- REAL DATA -->
+                <h3>@(Model?.TotalListings ?? 0)</h3>
+                <span class="stat-trend text-success">Properties on platform</span>
+            </div>
+            <div class="stat-icon green"><i class="fas fa-building"></i></div>
+        </div>
+
+        <!-- 3. ACTIVE LISTINGS -->
+        <div class="stat-card">
+            <div class="stat-info">
+                <h6>Active Listings</h6>
+                <!-- REAL DATA -->
+                <h3>@(Model?.ActiveListings ?? 0)</h3>
+                <span class="stat-trend">Live & Bookable</span>
+            </div>
+            <div class="stat-icon purple"><i class="fas fa-check-circle"></i></div>
+        </div>
+        
+        <!-- 4. PENDING REQUESTS -->
+        <div class="stat-card">
+            <div class="stat-info">
+                <h6>Pending Requests</h6>
+                <!-- REAL DATA -->
+                <h3>@(Model?.PendingHostRequests ?? 0)</h3>
+                <a href="@Url.Action("HostManagement", "Admin")" class="stat-trend text-warning" style="text-decoration:none">
+                    Review Now <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            <div class="stat-icon orange"><i class="fas fa-clipboard-list"></i></div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <!-- PENDING APPROVALS LIST -->
+        <div class="card-modern">
+            <div class="card-header-custom">
+                <h5>Pending Approvals</h5>
+                <!-- REAL DATA BADGE -->
+                <span class="badge-count">@(Model?.PendingHostRequests ?? 0)</span>
+            </div>
+            
+            <div style="padding: 20px; text-align: center;">
+                @if((Model?.PendingHostRequests ?? 0) > 0)
+                {
+                    <div class="approval-item" style="display:block; text-align:center; border:none;">
+                        <div class="approval-user" style="justify-content:center; margin-bottom:15px;">
+                            <div class="approval-details">
+                                <h6 class="text-warning">Action Required</h6>
+                                <p>You have @Model.PendingHostRequests host documents waiting for verification.</p>
+                            </div>
+                        </div>
+                        <a href="@Url.Action("HostManagement", "Admin")" class="btn-review" style="text-decoration:none; display:inline-block; padding: 8px 16px;">
+                            Go to Host Management
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="approval-item" style="justify-content:center; border:none; padding:40px 0;">
+                        <div class="approval-details">
+                            <h6 class="text-success"><i class="fas fa-check-circle"></i> All Good</h6>
+                            <p>No pending approvals at the moment.</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- REVENUE CHART -->
+        <div class="card-modern">
+            <div class="card-header-custom">
+                <h5>Revenue Overview</h5>
+            </div>
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-grid">
+        <!-- RECENT ACTIVITY -->
+        <div class="card-modern">
+            <div class="card-header-custom">
+                <h5>Recent User Activity</h5>
+            </div>
+            
+            <div class="activity-item">
+                <h6>New user registration</h6>
+                <p>New users are joining the platform • Just now</p>
+            </div>
+            
+            <div class="activity-item">
+                <h6>System Status</h6>
+                <p>Database sync active • 12 min ago</p>
+            </div>
+            
+            <div class="activity-item">
+                <h6>API Check</h6>
+                <p>Connection verified • 25 min ago</p>
+            </div>
+        </div>
+        
+        <!-- SYSTEM ALERTS -->
+        <div class="card-modern">
+            <div class="card-header-custom">
+                <h5>System Status</h5>
+                <span class="badge-count" style="background: #28a745;">Online</span>
+            </div>
+            
+            <div class="alert-item">
+                <h6 class="text-success">API Connection</h6>
+                <p>Connected successfully to Backend</p>
+            </div>
+            
+            <div class="alert-item">
+                <h6 class="text-primary">Database Status</h6>
+                <p>Active with @(Model?.TotalListings ?? 0) listings</p>
+            </div>
+            
+            <div class="alert-item">
+                <h6>Server Time</h6>
+                <p>@DateTime.Now.ToString("f")</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Static Chart Data
+    var labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var dataPoints = [45000, 52000, 48000, 55000, 65000, 58000, 70000, 68000, 75000, 72000, 80000, 85000];
+
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(65, 105, 225, 0.3)');
+    gradient.addColorStop(1, 'rgba(65, 105, 225, 0.01)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue',
+                data: dataPoints,
+                borderColor: '#4169E1',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+    
+    $('.nav-item a').on('click', function(e) {
+        if($(this).attr('href') === '#') {
+            e.preventDefault();
+        }
+    });
+</script>
+}

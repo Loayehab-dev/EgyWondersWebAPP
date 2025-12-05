@@ -1,0 +1,451 @@
+﻿@using System.Security.Claims
+
+@{
+    string displayName = "";
+    
+    if (User.Identity.IsAuthenticated)
+    {
+        // Try to get First Name
+        displayName = User.FindFirst(ClaimTypes.GivenName)?.Value;
+
+        // Fallback to Username/Email if First Name is missing
+        if (string.IsNullOrEmpty(displayName))
+        {
+            displayName = User.Identity.Name;
+        }
+
+        // Cleanup: If it's an email, show only the part before '@'
+        if (!string.IsNullOrEmpty(displayName) && displayName.Contains("@"))
+        {
+            displayName = displayName.Split('@')[0];
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EGYWonders</title>
+    
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/styles.css">
+
+    <style>
+        .navbar-nav .nav-link, .navbar-brand { white-space: nowrap; }
+        .navbar-nav { gap: 0.5rem; }
+        .brand-text { font-weight: 600; font-size: 1.25rem; }
+        
+        /* Footer Links Hover Effect */
+        .footer-link:hover { text-decoration: underline !important; color: #000 !important; }
+        
+        /* Ensure footer stays at bottom */
+        body { display: flex; flex-direction: column; min-height: 100vh; }
+        main { flex: 1 0 auto; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-xl navbar-light bg-white fixed-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
+                <div class="brand-logo text-danger"><i class="bi bi-compass-fill fs-4"></i></div>
+                <span class="brand-text ms-2 text-danger">EGYWonders</span>
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" asp-controller="Listing" asp-action="Index">Experiences</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="#destinations">Destinations</a>
+                    </li>
+                    
+                    @if (User.Identity.IsAuthenticated && User.IsInRole("Host"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link fw-bold text-primary" asp-controller="Host" asp-action="Index">
+                                <i class="bi bi-speedometer2"></i> Host Dashboard
+                            </a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" asp-controller="Host" asp-action="Register">Become a Host</a>
+                        </li>
+                    }
+                    
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="#about">About Egypt</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav ms-auto align-items-center mt-3 mt-xl-0">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item me-2">
+                            <a class="nav-link fw-bold text-dark" asp-controller="Guest" asp-action="Trips">
+                                <i class="bi bi-suitcase-lg me-1"></i> My Trips
+                            </a>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle fw-bold text-dark border px-3 py-2 rounded-pill shadow-sm" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-list me-2"></i>
+                                <i class="bi bi-person-circle fs-5"></i> 
+                                <span class="ms-1">@displayName</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 rounded-4" style="min-width: 240px;" aria-labelledby="userDropdown">
+                                <li><span class="dropdown-header fw-bold">Account</span></li>
+                                <li><a class="dropdown-item rounded-2 py-2" asp-controller="Auth" asp-action="Profile"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                                <li><a class="dropdown-item rounded-2 py-2" asp-controller="Guest" asp-action="Trips"><i class="bi bi-journal-check me-2"></i> My Bookings</a></li>
+                                
+                                @if (User.IsInRole("Host")) {
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item rounded-2 py-2 fw-bold text-primary" asp-controller="Host" asp-action="Index">Switch to Hosting</a></li>
+                                }
+                                
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item rounded-2 py-2 text-danger" asp-controller="Auth" asp-action="Logout"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item me-2">
+                            <a class="nav-link fw-bold" asp-controller="Auth" asp-action="Login">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-dark rounded-pill px-4" asp-controller="Auth" asp-action="Register">Sign Up</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main role="main" style="padding-top: 80px;">
+        @RenderBody()
+    </main>
+ <section id="destinations" class="py-5 bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold display-6">Popular Destinations</h2>
+            <p class="text-muted">Most loved cities by the community</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <a asp-controller="Listing" asp-action="Index" asp-route-search="Cairo" class="card border-0 rounded-4 overflow-hidden text-white shadow h-100 destination-card">
+                    <img src="~/Photos/Red Sea Diving in Dahab.png" class="card-img w-100 h-100 object-fit-cover transition-zoom" alt="Cairo">
+                    <div class="card-img-overlay d-flex flex-column justify-content-end p-4 gradient-overlay">
+                        <h3 class="fw-bold mb-0">Cairo</h3>
+                        <p class="mb-0 text-white-50">The City of a Thousand Minarets</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="row g-4 h-100">
+                    <div class="col-md-6">
+                        <a asp-controller="Listing" asp-action="Index" asp-route-search="Luxor" class="card border-0 rounded-4 overflow-hidden text-white shadow h-100 destination-card" style="min-height: 200px;">
+                            <img src="~/Photos/luxor.png" class="card-img w-100 h-100 object-fit-cover transition-zoom" alt="Luxor">
+                            <div class="card-img-overlay d-flex flex-column justify-content-end p-3 gradient-overlay">
+                                <h4 class="fw-bold mb-0">Luxor</h4>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a asp-controller="Listing" asp-action="Index" asp-route-search="Aswan" class="card border-0 rounded-4 overflow-hidden text-white shadow h-100 destination-card" style="min-height: 200px;">
+                            <img src="~/Photos/dahab.png" class="card-img w-100 h-100 object-fit-cover transition-zoom" alt="Aswan">
+                            <div class="card-img-overlay d-flex flex-column justify-content-end p-3 gradient-overlay">
+                                <h4 class="fw-bold mb-0">Aswan</h4>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-12">
+                        <a asp-controller="Listing" asp-action="Index" asp-route-search="Dahab" class="card border-0 rounded-4 overflow-hidden text-white shadow h-100 destination-card" style="min-height: 200px;">
+                            <img src="~/Photos/cairo.png" class="card-img w-100 h-100 object-fit-cover transition-zoom" alt="Red Sea">
+                            <div class="card-img-overlay d-flex flex-column justify-content-end p-3 gradient-overlay">
+                                <h4 class="fw-bold mb-0">Red Sea & Dahab</h4>
+                                <p class="mb-0 text-white-50">Relax by the crystal clear water</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="about" class="py-5 bg-white">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0 pe-lg-5">
+                <span class="text-danger fw-bold text-uppercase small ls-2">About Egypt</span>
+                <h2 class="display-5 fw-bold mb-4 mt-2" style="font-family: 'Playfair Display', serif;">Where History Comes Alive</h2>
+                <p class="lead text-muted mb-4">
+                    Egypt isn't just a destination; it's an experience etched in stone and sand. 
+                    From the dawn of civilization along the Nile banks to the bustling energy of modern Cairo.
+                </p>
+                <a asp-controller="Listing" asp-action="Index" class="btn btn-dark rounded-pill px-5 py-3 fw-bold">Start Exploring</a>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="row g-3">
+                    <div class="col-6 align-self-end">
+                        <img src="~/Photos/aswan.png" class="img-fluid rounded-4 shadow mb-3" alt="Khan el Khalili">
+                        <img src="~/Photos/luxor.png" class="img-fluid rounded-4 shadow" alt="Nile">
+                    </div>
+                    <div class="col-6">
+                        <img src="~/Photos/Bedouin Night in Sinai.png" class="img-fluid rounded-4 shadow mb-3" alt="Temple">
+                        <div class="bg-danger text-white p-4 rounded-4 shadow d-flex align-items-center justify-content-center text-center">
+                             <div>
+                                 <i class="bi bi-quote fs-1 opacity-50"></i>
+                                 <p class="fst-italic mb-0 fw-medium">"Egypt is the gift of the Nile."</p>
+                                 <small class="opacity-75">— Herodotus</small>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<style>
+    .transition-zoom { transition: transform 0.5s ease; }
+    .destination-card:hover .transition-zoom { transform: scale(1.05); }
+    .gradient-overlay { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+</style>
+
+    <footer class="bg-light border-top pt-5 mt-auto">
+        <div class="container">
+            <div class="row g-4 mb-5">
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="fw-bold mb-3">Support</h6>
+                    <ul class="list-unstyled d-flex flex-column gap-2 text-muted small">
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Help Center</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">AirCover</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Anti-discrimination</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Disability support</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Cancellation options</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="fw-bold mb-3">Hosting</h6>
+                    <ul class="list-unstyled d-flex flex-column gap-2 text-muted small">
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">EgyWonders your home</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">AirCover for Hosts</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Hosting resources</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Community forum</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Hosting responsibly</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="fw-bold mb-3">EgyWonders</h6>
+                    <ul class="list-unstyled d-flex flex-column gap-2 text-muted small">
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Newsroom</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">New features</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Careers</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Investors</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted footer-link">Gift cards</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-danger">
+                            <i class="bi bi-compass-fill fs-4"></i>
+                            <span class="fw-bold fs-5">EgyWonders</span>
+                        </div>
+                        <p class="text-muted small">Discover Egypt like never before with authentic local experiences.</p>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-top py-4 d-flex flex-column flex-md-row justify-content-between align-items-center small text-muted">
+                <div class="mb-2 mb-md-0">
+                    &copy; 2025 EgyWonders, Inc. · <a href="#" class="text-muted text-decoration-none mx-1">Privacy</a> · <a href="#" class="text-muted text-decoration-none mx-1">Terms</a> · <a href="#" class="text-muted text-decoration-none mx-1">Sitemap</a>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="d-flex align-items-center gap-1"><i class="bi bi-globe"></i> English (US)</span>
+                    <span class="d-flex align-items-center gap-1"><i class="bi bi-currency-dollar"></i> USD</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <div id="chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <button id="chat-toggle" class="btn btn-danger rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+            style="width: 60px; height: 60px; transition: transform 0.3s;">
+        <i class="bi bi-chat-dots-fill fs-3 text-white"></i>
+    </button>
+
+    <div id="chat-window" class="card shadow-lg border-0 rounded-4 overflow-hidden d-none" 
+         style="position: absolute; bottom: 80px; right: 0; width: 350px; height: 500px; display: flex; flex-direction: column;">
+        
+        <div class="card-header bg-danger text-white p-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-robot fs-4"></i>
+                <div>
+                    <h6 class="mb-0 fw-bold">Ask Cleo</h6>
+                    <small style="font-size: 0.75rem;">AI Travel Guide</small>
+                </div>
+            </div>
+            <button id="chat-close" class="btn btn-sm text-white"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div id="chat-messages" class="card-body p-3 bg-light overflow-auto" style="flex: 1;">
+            <div class="d-flex align-items-start gap-2 mb-3">
+                <div class="bg-white p-2 rounded-3 shadow-sm border" style="max-width: 80%;">
+                    <small class="d-block text-muted mb-1" style="font-size: 0.7rem;">Cleo</small>
+                    Hi! I'm Cleo. Tell me about your personality, and I'll suggest the perfect Egyptian trip for you! 🐫
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-white p-2 border-top">
+            <div class="input-group">
+                <input type="text" id="chat-input" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Type a message...">
+                <button id="chat-send" class="btn btn-danger rounded-circle ms-2" style="width: 40px; height: 40px;">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="chat-widget-container">
+    <button id="chat-toggle-btn" class="btn btn-danger rounded-circle shadow-lg d-flex align-items-center justify-content-center">
+        <i class="bi bi-chat-dots-fill fs-3 text-white"></i>
+    </button>
+
+    <div id="chat-window" class="card shadow-lg border-0 rounded-4 overflow-hidden d-none">
+        
+        <div class="card-header bg-danger text-white p-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-robot fs-4"></i>
+                <div>
+                    <h6 class="mb-0 fw-bold">Ask Cleo</h6>
+                    <small style="font-size: 0.75rem;">AI Travel Guide</small>
+                </div>
+            </div>
+            <button id="chat-close-btn" class="btn btn-sm text-white"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div id="chat-messages" class="card-body p-3 bg-light overflow-auto">
+            <div class="d-flex align-items-start gap-2 mb-3">
+                <div class="bg-white p-2 rounded-3 shadow-sm border" style="max-width: 80%;">
+                    <small class="d-block text-muted mb-1" style="font-size: 0.7rem;">Cleo</small>
+                    Hi! I'm Cleo. Ask me for Egypt travel advice! 🇪🇬
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-white p-2 border-top">
+            <div class="input-group">
+                <input type="text" id="chat-input" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Type a message...">
+                <button id="chat-send-btn" class="btn btn-danger rounded-circle ms-2" style="width: 40px; height: 40px;">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Elements
+        const toggleBtn = document.getElementById('chat-toggle-btn');
+        const closeBtn = document.getElementById('chat-close-btn');
+        const chatWindow = document.getElementById('chat-window');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('chat-send-btn');
+        const messagesContainer = document.getElementById('chat-messages');
+
+        // ★ FIX 1: Force Close Logic
+        closeBtn.addEventListener('click', () => {
+            chatWindow.classList.add('d-none'); 
+            chatWindow.style.display = 'none'; // Force hide
+        });
+
+        // ★ FIX 2: Force Open Logic
+        toggleBtn.addEventListener('click', () => {
+            if (chatWindow.classList.contains('d-none') || chatWindow.style.display === 'none') {
+                chatWindow.classList.remove('d-none');
+                chatWindow.style.display = 'flex'; // Force show
+            } else {
+                // If already open, clicking the bubble closes it
+                chatWindow.classList.add('d-none');
+                chatWindow.style.display = 'none';
+            }
+        });
+
+        // 3. SEND MESSAGE Logic (Same as before)
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            addMessage('You', text, 'bg-danger text-white ms-auto');
+            chatInput.value = '';
+            
+            const loadingId = addMessage('Cleo', 'Thinking...', 'bg-white text-muted fst-italic');
+
+            try {
+                const response = await fetch('/Chat/AskCleo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+                addMessage('Cleo', data.response, 'bg-white border shadow-sm');
+
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                addMessage('Cleo', 'Sorry, connection error.', 'bg-warning text-dark');
+            }
+        }
+
+        function addMessage(sender, text, cssClass) {
+            const id = 'msg-' + Date.now();
+            const align = sender === 'You' ? 'justify-content-end' : 'justify-content-start';
+            const html = `
+                <div id="${id}" class="d-flex ${align} mb-3 fade-in">
+                    <div class="p-2 rounded-3 ${cssClass}" style="max-width: 80%;">
+                        ${text}
+                    </div>
+                </div>`;
+            messagesContainer.insertAdjacentHTML('beforeend', html);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return id;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    });
+</script>    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>
