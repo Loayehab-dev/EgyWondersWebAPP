@@ -79,8 +79,9 @@ namespace EgyWonders.Controllers
 
         [HttpPut("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfile(UpdateProfileDTO dto)
-        {
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO dto)
+        
+            {
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
